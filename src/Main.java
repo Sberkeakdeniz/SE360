@@ -7,24 +7,24 @@ import java.util.concurrent.Executors;
 public class Main {
     private static final String DATABASE_URL = "jdbc:sqlite:identifier.db";
     private static final ExecutorService executorService = Executors.newFixedThreadPool(2);
+    private static boolean allFieldsFilled ;
 
     public static void main(String[] args) {
         try {
             Class.forName("org.sqlite.JDBC");
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
-            return; // Exit if the driver is not found
+            return;
         }
         setupDatabase();
 
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("Internship Management System");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setSize(900, 700);
+            frame.setSize(800, 600);
+            frame.setLocationRelativeTo(null);
 
             JTabbedPane tabbedPane = new JTabbedPane();
-
-            // Add the tabs
             tabbedPane.addTab("Internship Acceptance Form", createAcceptanceFormPanel());
             tabbedPane.addTab("Intern Evaluation Form", createEvaluationFormPanel());
             tabbedPane.addTab("Internship Place Evaluation Form", createPlaceEvaluationFormPanel());
@@ -61,54 +61,102 @@ public class Main {
 
     private static JPanel createFormPanel(String[] labels, String tableName, FormSubmitListener submitListener) {
         JPanel formPanel = new JPanel();
-        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.X_AXIS));
-        formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        GroupLayout layout = new GroupLayout(formPanel);
+        formPanel.setLayout(layout);
+        formPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+        // Set gaps between components
+        layout.setAutoCreateGaps(true);
+        layout.setAutoCreateContainerGaps(true);
+
+        JLabel[] labelComponents = new JLabel[labels.length];
         JTextField[] textFields = new JTextField[labels.length];
+        JLabel[] requiredLabels = new JLabel[labels.length];
+
         for (int i = 0; i < labels.length; i++) {
-            JPanel rowPanel = new JPanel();
-            rowPanel.setLayout(new BoxLayout(rowPanel, BoxLayout.Y_AXIS));
-            JLabel label = new JLabel(labels[i]);
-            label.setPreferredSize(new Dimension(400, 30));
-            rowPanel.add(label);
-
-            JTextField textField = new JTextField();
-            textField.setMaximumSize(new Dimension(400, 30));
-            textFields[i] = textField;
-            rowPanel.add(textField);
-
-            rowPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            formPanel.add(rowPanel);
-            formPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+            labelComponents[i] = new JLabel(labels[i]);
+            textFields[i] = new JTextField(20);
+            requiredLabels[i] = new JLabel("(This place is required*)");
+            requiredLabels[i].setForeground(Color.RED);
+            requiredLabels[i].setVisible(false);
         }
 
+        // Buttons
         JButton submitButton = new JButton("Submit");
-        submitButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+
         submitButton.addActionListener(e -> {
+
+
+            for (int i = 0; i < textFields.length; i++) {
+                if (textFields[i].getText().trim().isEmpty()) {
+                    requiredLabels[i].setVisible(true);
+                    allFieldsFilled = false;
+                } else {
+                    requiredLabels[i].setVisible(false);
+                    allFieldsFilled = true;
+                }
+            }
+
             String[] values = new String[textFields.length];
             for (int i = 0; i < textFields.length; i++) {
                 values[i] = textFields[i].getText();
             }
-            submitListener.onSubmit(values); // Pass the array to the listener
-        });
+            submitListener.onSubmit(values);
+
+            for (JTextField textField : textFields) {
+                textField.setText("");
+            }
+        } );
 
         JButton deleteButton = new JButton("Delete Record");
-        deleteButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         deleteButton.addActionListener(e -> {
             String inputId = JOptionPane.showInputDialog(null, "Enter the ID of the record to delete:");
             if (inputId != null && !inputId.trim().isEmpty()) {
-                try {
-                    executorService.execute(() -> deleteFromDatabase(tableName, inputId));
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(null, "Invalid ID. Please enter a numeric value.", "Error", JOptionPane.ERROR_MESSAGE);
-                }
+                executorService.execute(() -> deleteFromDatabase(tableName, inputId));
             }
         });
 
-        formPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-        formPanel.add(submitButton);
-        formPanel.add(Box.createRigidArea(new Dimension(0, 5)));
-        formPanel.add(deleteButton);
+        // GroupLayout Configuration
+        GroupLayout.SequentialGroup hGroup = layout.createSequentialGroup();
+        GroupLayout.ParallelGroup labelsGroup = layout.createParallelGroup(GroupLayout.Alignment.TRAILING);
+        GroupLayout.ParallelGroup fieldsGroup = layout.createParallelGroup();
+        GroupLayout.ParallelGroup requiredLabelsGroup = layout.createParallelGroup();
+
+
+        for (int i = 0; i < labels.length; i++) {
+            labelsGroup.addComponent(labelComponents[i]);
+            fieldsGroup.addComponent(textFields[i]);
+            requiredLabelsGroup.addComponent(requiredLabels[i]);
+        }
+
+        hGroup.addGroup(labelsGroup);
+        hGroup.addPreferredGap(LayoutStyle.ComponentPlacement.RELATED);
+        hGroup.addGroup(fieldsGroup);
+        hGroup.addPreferredGap(LayoutStyle.ComponentPlacement.RELATED);
+        hGroup.addGroup(requiredLabelsGroup);
+
+        // Buttons in horizontal group
+        hGroup.addGroup(layout.createParallelGroup()
+                .addGroup(layout.createSequentialGroup()
+                        .addComponent(submitButton)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(deleteButton)));
+
+        layout.setHorizontalGroup(hGroup);
+
+        GroupLayout.SequentialGroup vGroup = layout.createSequentialGroup();
+        for (int i = 0; i < labels.length; i++) {
+            vGroup.addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
+                    .addComponent(labelComponents[i])
+                    .addComponent(textFields[i])
+                    .addComponent(requiredLabels[i]));
+        }
+        vGroup.addGap(20);
+        vGroup.addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
+                .addComponent(submitButton)
+                .addComponent(deleteButton));
+
+        layout.setVerticalGroup(vGroup);
 
         return formPanel;
     }
@@ -158,7 +206,19 @@ public class Main {
             for (int i = 0; i < values.length; i++) {
                 stmt.setString(i + 1, values[i]);
             }
-            stmt.executeUpdate();
+            if(allFieldsFilled){
+                stmt.executeUpdate();
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(null, "Record saved successfully");
+                });
+
+
+            } else {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(null, "Please fill all the fields");
+                });
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
