@@ -1,5 +1,9 @@
+import org.sqlite.SQLiteException;
+
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.sql.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -81,8 +85,22 @@ public class Main {
             requiredLabels[i].setVisible(false);
         }
 
+
         // Buttons
         JButton submitButton = new JButton("Submit");
+        Color defaultColor = submitButton.getBackground();
+        Color hoverColor = Color.decode("#228B22");
+        submitButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                submitButton.setBackground(hoverColor);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                submitButton.setBackground(defaultColor);
+            }
+        });
 
         submitButton.addActionListener(e -> {
 
@@ -116,6 +134,15 @@ public class Main {
             }
         });
 
+        JButton logoutButton = new JButton("Logout");
+        logoutButton.addActionListener(e -> {
+            int option = JOptionPane.showConfirmDialog(null, "Are you sure you want to logout?", "Logout", JOptionPane.YES_NO_OPTION);
+            if (option == JOptionPane.YES_OPTION) {
+                frame.dispose();
+                showLoginScreen();
+            }
+        });
+
         // GroupLayout Configuration
         GroupLayout.SequentialGroup hGroup = layout.createSequentialGroup();
         GroupLayout.ParallelGroup labelsGroup = layout.createParallelGroup(GroupLayout.Alignment.TRAILING);
@@ -140,7 +167,10 @@ public class Main {
                 .addGroup(layout.createSequentialGroup()
                         .addComponent(submitButton)
                         .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(deleteButton)));
+                        .addComponent(deleteButton)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(logoutButton)
+                ));
 
         layout.setHorizontalGroup(hGroup);
 
@@ -154,7 +184,9 @@ public class Main {
         vGroup.addGap(20);
         vGroup.addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
                 .addComponent(submitButton)
-                .addComponent(deleteButton));
+                .addComponent(deleteButton)
+                .addComponent(logoutButton)
+        );
 
         layout.setVerticalGroup(vGroup);
 
