@@ -11,7 +11,9 @@ import java.util.concurrent.Executors;
 public class Main {
     private static final String DATABASE_URL = "jdbc:sqlite:identifier.db";
     private static final ExecutorService executorService = Executors.newFixedThreadPool(2);
-    private static boolean allFieldsFilled ;
+    private static boolean allFieldsFilled;
+    private static boolean isLoggedOut = false;
+    static JFrame frame = new JFrame("Internship Management System");
 
     public static void main(String[] args) {
         try {
@@ -22,27 +24,110 @@ public class Main {
         }
         setupDatabase();
 
-        SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Internship Management System");
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setSize(800, 600);
-            frame.setLocationRelativeTo(null);
+        SwingUtilities.invokeLater(() -> showLoginScreen());
+    }
 
-            JTabbedPane tabbedPane = new JTabbedPane();
-            tabbedPane.addTab("Internship Acceptance Form", createAcceptanceFormPanel());
-            tabbedPane.addTab("Intern Evaluation Form", createEvaluationFormPanel());
-            tabbedPane.addTab("Internship Place Evaluation Form", createPlaceEvaluationFormPanel());
+    private static void showLoginScreen() {
+        JFrame loginFrame = new JFrame("Login");
+        loginFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        loginFrame.setSize(400, 300);
+        loginFrame.setLayout(new GridBagLayout());
+        loginFrame.setLocationRelativeTo(null);
 
-            frame.add(tabbedPane);
-            frame.setVisible(true);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+
+        JLabel instructorIdLabel = new JLabel("Instructor Id:");
+        JTextField instructorIdField = new JTextField(15);
+
+        JLabel passwordLabel = new JLabel("Password:");
+        JPasswordField passwordField = new JPasswordField(15);
+
+        JButton loginButton = new JButton("Login");
+        JLabel statusLabel = new JLabel();
+        statusLabel.setForeground(Color.RED);
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        loginFrame.add(instructorIdLabel, gbc);
+
+        gbc.gridx = 1;
+        loginFrame.add(instructorIdField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        loginFrame.add(passwordLabel, gbc);
+
+        gbc.gridx = 1;
+        loginFrame.add(passwordField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        loginFrame.add(loginButton, gbc);
+
+        gbc.gridy = 3;
+        loginFrame.add(statusLabel, gbc);
+
+        loginButton.addActionListener(e -> {
+            int instructorId = Integer.parseInt(instructorIdField.getText().trim());
+            String password = new String(passwordField.getPassword()).trim();
+
+            if (authenticate(instructorId, password)) {
+                loginFrame.dispose();
+                showMainApplication();
+            } else {
+                statusLabel.setText("Invalid instructorId or password.");
+            }
         });
+
+        loginFrame.setVisible(true);
+    }
+
+    private static boolean authenticate(int instructorId, String password) {
+        try (Connection conn = DriverManager.getConnection(DATABASE_URL)) {
+            
+            String query = "SELECT * FROM instructors WHERE instructorId = ? AND password = ?";
+            PreparedStatement stmt = conn.prepareStatement(query);
+
+            stmt.setInt(1, instructorId);
+            stmt.setString(2, password);
+
+            ResultSet resultSet = stmt.executeQuery();
+
+            return resultSet.next();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // Return false if an exception occurs or no matching record is found
+        return false;
+    }
+
+
+    private static void showMainApplication() {
+
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 600);
+        frame.setLocationRelativeTo(null);
+
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.addTab("Internship Acceptance Form", createAcceptanceFormPanel());
+        tabbedPane.addTab("Intern Evaluation Form", createEvaluationFormPanel());
+        tabbedPane.addTab("Internship Place Evaluation Form", createPlaceEvaluationFormPanel());
+
+        frame.add(tabbedPane);
+        frame.setVisible(true);
+
     }
 
     private static JPanel createAcceptanceFormPanel() {
         return createFormPanel(new String[]{
                 "Name-Surname:", "Student ID:", "Faculty:", "Internship Dates:",
                 "Institution Name:", "Institution Address:", "Institution Phone:", "Responsible Name:"
-        },"InternshipAcceptance" ,values -> executorService.execute(() -> saveAcceptanceForm(
+        }, "InternshipAcceptance", values -> executorService.execute(() -> saveAcceptanceForm(
                 values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7]
         )));
     }
@@ -50,7 +135,7 @@ public class Main {
     private static JPanel createEvaluationFormPanel() {
         return createFormPanel(new String[]{
                 "Name-Surname:", "Student ID:", "Evaluation Date:", "Responsible Name:", "Overall Evaluation:"
-        }, "InternEvaluation",values -> executorService.execute(() -> saveEvaluationForm(
+        }, "InternEvaluation", values -> executorService.execute(() -> saveEvaluationForm(
                 values[0], values[1], values[2], values[3], values[4]
         )));
     }
@@ -58,7 +143,7 @@ public class Main {
     private static JPanel createPlaceEvaluationFormPanel() {
         return createFormPanel(new String[]{
                 "Name-Surname:", "Student ID:", "Institution Name:", "Duration:", "Feedback:"
-        },"InternshipPlaceEvaluation", values -> executorService.execute(() -> savePlaceEvaluationForm(
+        }, "InternshipPlaceEvaluation", values -> executorService.execute(() -> savePlaceEvaluationForm(
                 values[0], values[1], values[2], values[3], values[4]
         )));
     }
@@ -69,7 +154,6 @@ public class Main {
         formPanel.setLayout(layout);
         formPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Set gaps between components
         layout.setAutoCreateGaps(true);
         layout.setAutoCreateContainerGaps(true);
 
@@ -86,7 +170,6 @@ public class Main {
         }
 
 
-        // Buttons
         JButton submitButton = new JButton("Submit");
         Color defaultColor = submitButton.getBackground();
         Color hoverColor = Color.decode("#228B22");
@@ -103,8 +186,6 @@ public class Main {
         });
 
         submitButton.addActionListener(e -> {
-
-
             for (int i = 0; i < textFields.length; i++) {
                 if (textFields[i].getText().trim().isEmpty()) {
                     requiredLabels[i].setVisible(true);
@@ -120,11 +201,7 @@ public class Main {
                 values[i] = textFields[i].getText();
             }
             submitListener.onSubmit(values);
-
-            for (JTextField textField : textFields) {
-                textField.setText("");
-            }
-        } );
+        });
 
         JButton deleteButton = new JButton("Delete Record");
         deleteButton.addActionListener(e -> {
@@ -143,12 +220,10 @@ public class Main {
             }
         });
 
-        // GroupLayout Configuration
         GroupLayout.SequentialGroup hGroup = layout.createSequentialGroup();
         GroupLayout.ParallelGroup labelsGroup = layout.createParallelGroup(GroupLayout.Alignment.TRAILING);
         GroupLayout.ParallelGroup fieldsGroup = layout.createParallelGroup();
         GroupLayout.ParallelGroup requiredLabelsGroup = layout.createParallelGroup();
-
 
         for (int i = 0; i < labels.length; i++) {
             labelsGroup.addComponent(labelComponents[i]);
@@ -162,7 +237,6 @@ public class Main {
         hGroup.addPreferredGap(LayoutStyle.ComponentPlacement.RELATED);
         hGroup.addGroup(requiredLabelsGroup);
 
-        // Buttons in horizontal group
         hGroup.addGroup(layout.createParallelGroup()
                 .addGroup(layout.createSequentialGroup()
                         .addComponent(submitButton)
@@ -180,20 +254,16 @@ public class Main {
                     .addComponent(labelComponents[i])
                     .addComponent(textFields[i])
                     .addComponent(requiredLabels[i]));
+            vGroup.addGap(30); // Add gap between rows
         }
-        vGroup.addGap(20);
         vGroup.addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
                 .addComponent(submitButton)
                 .addComponent(deleteButton)
-                .addComponent(logoutButton)
-        );
-
+                .addComponent(logoutButton));
         layout.setVerticalGroup(vGroup);
 
         return formPanel;
     }
-
-
 
     private static void setupDatabase() {
         try (Connection conn = DriverManager.getConnection(DATABASE_URL)) {
@@ -238,12 +308,11 @@ public class Main {
             for (int i = 0; i < values.length; i++) {
                 stmt.setString(i + 1, values[i]);
             }
-            if(allFieldsFilled){
+            if (allFieldsFilled) {
                 stmt.executeUpdate();
                 SwingUtilities.invokeLater(() -> {
                     JOptionPane.showMessageDialog(null, "Record saved successfully");
                 });
-
 
             } else {
                 SwingUtilities.invokeLater(() -> {
@@ -261,9 +330,9 @@ public class Main {
             String query = "DELETE FROM " + tableName + " WHERE studentID = ?";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, studentID);
-            int rowsAffected =stmt.executeUpdate();
+            int rowsAffected = stmt.executeUpdate();
 
-            if(rowsAffected >0) {
+            if (rowsAffected > 0) {
                 SwingUtilities.invokeLater(() -> {
                     JOptionPane.showMessageDialog(null, "Record deleted successfully");
                 });
