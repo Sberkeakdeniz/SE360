@@ -271,15 +271,6 @@ public class Main {
         hGroup.addPreferredGap(LayoutStyle.ComponentPlacement.RELATED);
         hGroup.addGroup(requiredLabelsGroup);
 
-
-//        hGroup.addGroup(layout.createParallelGroup()
-//                .addGroup(layout.createSequentialGroup()
-//                        .addComponent(submitButton)
-//                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-//                        .addComponent(deleteButton)
-//                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-//                        .addComponent(logoutButton)
-//                ));
         layout.setHorizontalGroup(hGroup);
 
         GroupLayout.SequentialGroup vGroup = layout.createSequentialGroup();
@@ -292,10 +283,6 @@ public class Main {
             );
             vGroup.addGap(30); // Add gap between rows
         }
-//        vGroup.addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
-//                .addComponent(submitButton)
-//                .addComponent(deleteButton)
-//                .addComponent(logoutButton));
         layout.setVerticalGroup(vGroup);
         formPanel.add(fieldsPanel, BorderLayout.CENTER);
 
@@ -345,7 +332,6 @@ public class Main {
                 "VALUES (?, ?, ?, ?, ?)", name, studentID, institutionName, duration, feedback);
     }
 
-    //TODO: Check the record is already exist or not before saving
     private static void saveToDatabase(String query, String... values) {
         try (Connection conn = DriverManager.getConnection(DATABASE_URL)) {
 
@@ -356,9 +342,10 @@ public class Main {
 
                 ResultSet resultSet = checkStmt.executeQuery();
                 if (resultSet.next() && resultSet.getInt(1) > 0) {
+
                     // Record already exists
                     SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(null, "Record already exists with this Student ID.");
+                        JOptionPane.showMessageDialog(null, "Record already exists with this Student ID. Please search/edit instead");
                     });
                     return; // Exit the method without saving
                 }
@@ -424,6 +411,7 @@ public class Main {
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(new JScrollPane(table), BorderLayout.CENTER);
         panel.add(updateButton, BorderLayout.SOUTH);
+        panel.setPreferredSize(new Dimension(750, 400));
 
         // Show the panel in a dialog
         JDialog dialog = new JDialog();
