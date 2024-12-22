@@ -1,0 +1,24 @@
+<dependencies>
+    <!-- Existing dependencies -->
+
+    <!-- Apache POI Core -->
+    <dependency>
+        <groupId>org.apache.poi</groupId>
+        <artifactId>poi</artifactId>
+        <version>5.2.3</version> <!-- Use the latest version available -->
+    </dependency>
+
+    <!-- Apache POI - OOXML Support -->
+    <dependency>
+        <groupId>org.apache.poi</groupId>
+        <artifactId>poi-ooxml</artifactId>
+        <version>5.2.3</version> <!-- Use the latest version available -->
+    </dependency>
+    
+    <!-- Apache POI - OOXML Schemas (Optional) -->
+    <dependency>
+        <groupId>org.apache.poi</groupId>
+        <artifactId>ooxml-schemas</artifactId>
+        <version>1.4</version>
+    </dependency>
+</dependencies> 

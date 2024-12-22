@@ -1,6 +1,8 @@
 import javax.swing.table.DefaultTableModel;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.sql.*;
@@ -13,6 +15,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.io.*;
 import java.net.*;
+import java.util.HashMap;
+import java.util.Map;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 class SQLiteServer {
     private static final String DATABASE_URL = "jdbc:sqlite:identifier.db"; // Path to your SQLite database
@@ -94,11 +100,11 @@ class SQLiteServer {
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, studentID TEXT UNIQUE, faculty TEXT, dates TEXT, " +
                     "institutionName TEXT, institutionAddress TEXT, institutionPhone TEXT, responsibleName TEXT)";
             String createEvaluationTable = "CREATE TABLE IF NOT EXISTS InternEvaluation (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, studentID TEXT, evaluationDate TEXT, responsibleName TEXT, evaluation TEXT)";
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, studentID TEXT UNIQUE, evaluationDate TEXT, responsibleName TEXT, evaluation TEXT)";
             String createPlaceEvaluationTable = "CREATE TABLE IF NOT EXISTS InternshipPlaceEvaluation (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "name TEXT, " +
-                    "studentID TEXT, " +
+                    "studentID TEXT UNIQUE, " +
                     "institutionName TEXT, " +
                     "duration TEXT, " +
                     "salary TEXT, " +
@@ -125,16 +131,19 @@ class SQLiteServer {
                     "negativeAspects TEXT)";
             String createInstructorsTable = "CREATE TABLE IF NOT EXISTS instructors (" +
                     "instructorId INTEGER PRIMARY KEY, password TEXT)";
+            String createUser = "INSERT INTO instructors (instructorId, password) SELECT 123, '123' WHERE NOT EXISTS (SELECT 1 FROM instructors WHERE instructorId = 123)";
             conn.createStatement().execute(createAcceptanceTable);
             conn.createStatement().execute(createEvaluationTable);
             conn.createStatement().execute(createPlaceEvaluationTable);
             conn.createStatement().execute(createInstructorsTable);
+            conn.createStatement().execute(createUser);
             System.out.println("Database setup complete.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 }
+
 
 class SQLiteClient {
     private static final String SERVER_ADDRESS = "localhost"; // Replace with server's IP address
@@ -302,10 +311,7 @@ public class Main {
         tabbedPane.addTab("Intern Evaluation Form", createEvaluationFormPanel());
         tabbedPane.addTab("Internship Place Evaluation Form", createPlaceEvaluationFormPanel());
 
-        JPanel mainTabPanel = new JPanel(new BorderLayout());
-        mainTabPanel.add(tabbedPane, BorderLayout.CENTER);
-
-        frame.add(mainTabPanel);
+        frame.add(tabbedPane, BorderLayout.CENTER);
         frame.setVisible(true);
     }
 
@@ -584,36 +590,17 @@ public class Main {
             executorService.execute(() -> savePlaceEvaluationForm(formData));
         });
 
-        deleteButton.addActionListener(e -> {
-            String inputId = JOptionPane.showInputDialog(null, "Enter the Student ID of the record to delete:");
-            if (inputId != null && !inputId.trim().isEmpty()) {
-                if (!isNumeric(inputId.trim())) {
-                    showInfoDialog("Student ID must be a number.");
-                    return;
-                }
-                executorService.execute(() -> deleteFromDatabase("InternshipPlaceEvaluation", inputId.trim()));
-            }
+        // Add Export All Forms button
+        JButton exportAllFormsButton = new JButton("Export All Forms");
+        exportAllFormsButton.setBackground(new Color(30, 144, 255)); // Dodger Blue
+        exportAllFormsButton.setForeground(Color.WHITE);
+        exportAllFormsButton.setFocusPainted(false);
+        exportAllFormsButton.setFont(new Font("Tahoma", Font.BOLD, 12));
+        exportAllFormsButton.addActionListener(e -> {
+            exportAllFormsToExcel();
         });
 
-        searchButton.addActionListener(e -> {
-            String studentID = JOptionPane.showInputDialog(frame, "Enter the Student ID to search/edit:");
-            if (studentID != null && !studentID.trim().isEmpty()) {
-                if (!isNumeric(studentID.trim())) {
-                    showInfoDialog("Student ID must be a number.");
-                    return;
-                }
-                executorService.execute(() -> searchInDatabase("InternshipPlaceEvaluation", studentID.trim()));
-            }
-        });
-
-        logoutButton.addActionListener(e -> {
-            int option = JOptionPane.showConfirmDialog(null, "Are you sure you want to logout?", "Logout", JOptionPane.YES_NO_OPTION);
-            if (option == JOptionPane.YES_OPTION) {
-                frame.dispose();
-                showLoginScreen();
-            }
-        });
-
+        buttonsPanel.add(exportAllFormsButton); // Add Export All Forms button first
         buttonsPanel.add(submitButton);
         buttonsPanel.add(deleteButton);
         buttonsPanel.add(searchButton);
@@ -745,6 +732,16 @@ public class Main {
             }
         });
 
+        // Add Export All Forms button
+        JButton exportAllFormsButton = new JButton("Export All Forms");
+        exportAllFormsButton.setBackground(new Color(30, 144, 255)); // Dodger Blue
+        exportAllFormsButton.setForeground(Color.WHITE);
+        exportAllFormsButton.setFocusPainted(false);
+        exportAllFormsButton.setFont(new Font("Tahoma", Font.BOLD, 12));
+        exportAllFormsButton.addActionListener(e -> {
+            exportAllFormsToExcel();
+        });
+
         JButton deleteButton = new JButton("Delete Record");
         deleteButton.addActionListener(e -> {
             String inputId = JOptionPane.showInputDialog(null, "Enter the Student ID of the record to delete:");
@@ -776,10 +773,11 @@ public class Main {
                     showInfoDialog("Student ID must be a number.");
                     return;
                 }
-                executorService.execute(() -> searchInDatabase(tableName, studentID.trim()));
+                executorService.execute(() -> searchInDatabase(studentID.trim()));
             }
         });
 
+        buttonsPanel.add(exportAllFormsButton); // Add Export All Forms button first
         buttonsPanel.add(submitButton);
         buttonsPanel.add(deleteButton);
         buttonsPanel.add(searchButton);
@@ -937,13 +935,25 @@ public class Main {
         } 
     }
 
-    private static void searchInDatabase(String tableName, String studentID) {
+    private static void searchInDatabase(String studentID) {
         try {
-            // Create query based on table name
-            String query = "SELECT * FROM " + tableName + " WHERE studentID = '" + studentID + "'";
-            String result = SQLiteClient.sendQuery(query);
-    
-            if (!result.contains("\n")) {
+            // Initialize a map to hold table names and their corresponding query results
+            Map<String, String> tableResults = new HashMap<>();
+
+            // List of tables to search
+            String[] tables = {"InternshipAcceptance", "InternEvaluation", "InternshipPlaceEvaluation"};
+
+            // Query each table for the given studentID
+            for (String table : tables) {
+                String query = "SELECT * FROM " + table + " WHERE studentID = '" + studentID.replace("'", "''") + "'";
+                String result = SQLiteClient.sendQuery(query);
+                if (result != null && result.contains("\n")) { // Assuming that a successful query returns data separated by newlines
+                    tableResults.put(table, result);
+                }
+            }
+
+            // If no records found in any table
+            if (tableResults.isEmpty()) {
                 SwingUtilities.invokeLater(() -> {
                     JDialog dialog = new JDialog(frame, "Search Results for Student ID: " + studentID, true);
                     dialog.setSize(400, 200);
@@ -956,73 +966,116 @@ public class Main {
                 });
                 return;
             }
-    
-            // Parse the data
-            String[] rows = result.split("\n");
-            String[] headers = rows[0].split("\t");
-            String[] data = rows[1].split("\t");
-    
-            // Create dialog based on table type
+
+            // Create dialog with a tabbed pane
             SwingUtilities.invokeLater(() -> {
                 JDialog dialog = new JDialog(frame, "Search Results for Student ID: " + studentID, true);
                 dialog.setLayout(new BorderLayout(10, 10));
                 dialog.setSize(800, 600);
-    
-                JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
-                mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-    
-                // Create content based on table type
-                JPanel formContentPanel;
-                switch (tableName) {
-                    case "InternshipAcceptance":
-                        formContentPanel = createAcceptanceSearchPanel(headers, data);
-                        break;
-                    case "InternEvaluation":
-                        formContentPanel = createEvaluationSearchPanel(headers, data);
-                        break;
-                    case "InternshipPlaceEvaluation":
-                        formContentPanel = createPlaceEvaluationSearchPanel(headers, data);
-                        break;
-                    default:
-                        formContentPanel = new JPanel();
+
+                JTabbedPane tabbedPane = new JTabbedPane();
+
+                // Iterate through the results and add tabs accordingly
+                for (Map.Entry<String, String> entry : tableResults.entrySet()) {
+                    String tableName = entry.getKey();
+                    String queryResult = entry.getValue();
+
+                    // Parse the data
+                    String[] rows = queryResult.split("\n");
+                    if (rows.length < 2) {
+                        continue; // Skip if there's no data
+                    }
+                    String[] headers = rows[0].split("\t");
+                    String[] data = rows[1].split("\t");
+
+                    // Determine which panel to create based on the table name
+                    switch (tableName) {
+                        case "InternshipAcceptance":
+                            tabbedPane.addTab("Internship Acceptance", createAcceptanceSearchPanel(headers, data));
+                            break;
+                        case "InternEvaluation":
+                            tabbedPane.addTab("Intern Evaluation", createEvaluationSearchPanel(headers, data));
+                            break;
+                        case "InternshipPlaceEvaluation":
+                            tabbedPane.addTab("Internship Place Evaluation", new JScrollPane(createPlaceEvaluationSearchPanel(headers, data)));
+                            break;
+                        default:
+                            tabbedPane.addTab(tableName, new JPanel());
+                    }
                 }
-    
-                // Add formContentPanel to JScrollPane
-                JScrollPane scrollPane = new JScrollPane(formContentPanel);
-                mainPanel.add(scrollPane, BorderLayout.CENTER);
-    
-                // Add update button
+
+                // Buttons Panel
+                JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
                 JButton updateButton = new JButton("Update");
                 updateButton.addActionListener(e -> {
-                    // Retrieve editable fields
-                    Object[] fields = (Object[]) formContentPanel.getClientProperty("fields");
+                    // Retrieve the selected tab
+                    int selectedIndex = tabbedPane.getSelectedIndex();
+                    String selectedTab = tabbedPane.getTitleAt(selectedIndex);
+                    Component selectedComponent = tabbedPane.getComponentAt(selectedIndex);
+
+                    JPanel selectedPanel;
+
+                    // Check if the selected component is a JScrollPane
+                    if (selectedComponent instanceof JScrollPane) {
+                        JScrollPane scrollPane = (JScrollPane) selectedComponent;
+                        selectedPanel = (JPanel) scrollPane.getViewport().getView();
+                    } else if (selectedComponent instanceof JPanel) {
+                        selectedPanel = (JPanel) selectedComponent;
+                    } else {
+                        showErrorDialog("Unexpected component type in tabbed pane.", null);
+                        return;
+                    }
+
                     try {
-                        switch (tableName) {
-                            case "InternshipAcceptance":
-                                updateAcceptanceRecord(fields, studentID);
+                        switch (selectedTab) {
+                            case "Internship Acceptance":
+                                Object[] acceptanceFields = (Object[]) selectedPanel.getClientProperty("fields");
+                                updateAcceptanceRecord(acceptanceFields, studentID);
                                 break;
-                            case "InternEvaluation":
-                                updateEvaluationRecord(fields, studentID);
+                            case "Intern Evaluation":
+                                Object[] evaluationFields = (Object[]) selectedPanel.getClientProperty("fields");
+                                updateEvaluationRecord(evaluationFields, studentID);
                                 break;
-                            case "InternshipPlaceEvaluation":
-                                updatePlaceEvaluationRecord(fields, studentID);
+                            case "Internship Place Evaluation":
+                                Object[] placeFields = (Object[]) selectedPanel.getClientProperty("fields");
+                                updatePlaceEvaluationRecord(placeFields, studentID);
                                 break;
+                            default:
+                                // Handle other tabs if any
+                                showInfoDialog("No update functionality implemented for this tab.");
                         }
                         dialog.dispose();
                     } catch (Exception ex) {
                         showErrorDialog("Error occurred while updating the record.", ex);
                     }
                 });
-                JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+
+                // **Add Export All Forms button**
+                JButton exportAllFormsButton = new JButton("Export All Forms");
+                exportAllFormsButton.setBackground(new Color(30, 144, 255)); // Dodger Blue
+                exportAllFormsButton.setForeground(Color.WHITE); // White text for contrast
+                exportAllFormsButton.setFocusPainted(false);
+                exportAllFormsButton.setFont(new Font("Tahoma", Font.BOLD, 12));
+                exportAllFormsButton.addActionListener(e -> {
+                    exportAllFormsToExcel();
+                });
+                buttonPanel.add(exportAllFormsButton); // **Removed Export All Forms button**
+
+                // **Add the Export to Excel button**
+                JButton exportButton = new JButton("Export to Excel");
+                exportButton.addActionListener(e -> {
+                    exportRecordToExcel(tableResults, studentID);
+                });
                 buttonPanel.add(updateButton);
-    
-                mainPanel.add(buttonPanel, BorderLayout.SOUTH);
-    
-                dialog.add(mainPanel);
+                buttonPanel.add(exportButton); // **Added Export button**
+
+                dialog.add(tabbedPane, BorderLayout.CENTER);
+                dialog.add(buttonPanel, BorderLayout.SOUTH);
+
                 dialog.setLocationRelativeTo(frame);
                 dialog.setVisible(true);
             });
-    
+
         } catch (Exception e) {
             showErrorDialog("Error occurred while searching.", e);
         }
@@ -1032,20 +1085,24 @@ public class Main {
     private static JPanel createAcceptanceSearchPanel(String[] headers, String[] data) {
         JPanel formPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
+        
+        // Center all components
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 10, 10, 10);
+        
         // Define the fields
         String[] labels = {"Name-Surname:", "Faculty:", "Dates:", "Institution Name:", "Institution Address:", "Institution Phone:", "Responsible Name:"};
-        JTextField nameField = new JTextField(findValueByHeader(headers, data, "name"));
-        JTextField facultyField = new JTextField(findValueByHeader(headers, data, "faculty"));
-        JTextField datesField = new JTextField(findValueByHeader(headers, data, "dates"));
-        JTextField institutionNameField = new JTextField(findValueByHeader(headers, data, "institutionName"));
-        JTextField institutionAddressField = new JTextField(findValueByHeader(headers, data, "institutionAddress"));
-        JTextField institutionPhoneField = new JTextField(findValueByHeader(headers, data, "institutionPhone"));
-        JTextField responsibleNameField = new JTextField(findValueByHeader(headers, data, "responsibleName"));
-
-        // Add labels and fields to the formPanel
+        JTextField nameField = new JTextField(findValueByHeader(headers, data, "name"), 20);
+        JTextField facultyField = new JTextField(findValueByHeader(headers, data, "faculty"), 20);
+        JTextField datesField = new JTextField(findValueByHeader(headers, data, "dates"), 20);
+        JTextField institutionNameField = new JTextField(findValueByHeader(headers, data, "institutionName"), 20);
+        JTextField institutionAddressField = new JTextField(findValueByHeader(headers, data, "institutionAddress"), 20);
+        JTextField institutionPhoneField = new JTextField(findValueByHeader(headers, data, "institutionPhone"), 20);
+        JTextField responsibleNameField = new JTextField(findValueByHeader(headers, data, "responsibleName"), 20);
+    
+        // Array of labels and corresponding fields
         Object[][] fields = {
             {labels[0], nameField},
             {labels[1], facultyField},
@@ -1055,23 +1112,22 @@ public class Main {
             {labels[5], institutionPhoneField},
             {labels[6], responsibleNameField}
         };
-
-        int row = 0;
+    
+        // Add labels and fields to the formPanel
         for (Object[] field : fields) {
             gbc.gridx = 0;
-            gbc.gridy = row;
-            gbc.weightx = 0.3;
+            gbc.anchor = GridBagConstraints.CENTER;
             formPanel.add(new JLabel((String) field[0]), gbc);
-
+    
             gbc.gridx = 1;
-            gbc.weightx = 0.7;
-            formPanel.add((Component) field[1], gbc); // Ensure casting to Component
-            row++;
+            formPanel.add((Component) field[1], gbc);
+            
+            gbc.gridy++;
         }
-
+    
         // Store references to editable fields for later use
         formPanel.putClientProperty("fields", fields);
-
+    
         return formPanel;
     }
 
@@ -1079,29 +1135,40 @@ public class Main {
     private static JPanel createEvaluationSearchPanel(String[] headers, String[] data) {
         JPanel formPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-    
+        
+        // Center all components
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 10, 10, 10);
+
         // Define the fields
         String[] labels = {"Name-Surname:", "Evaluation Date:", "Responsible Name:", "Evaluation:"};
-        JTextField nameField = new JTextField(findValueByHeader(headers, data, "name"));
-        JTextField evaluationDateField = new JTextField(findValueByHeader(headers, data, "evaluationDate"));
-        JTextField responsibleNameField = new JTextField(findValueByHeader(headers, data, "responsibleName"));
-        JTextField evaluationField = new JTextField(findValueByHeader(headers, data, "evaluation"));
-    
+        JTextField nameField = new JTextField(findValueByHeader(headers, data, "name"), 20);
+        JTextField evaluationDateField = new JTextField(findValueByHeader(headers, data, "evaluationDate"), 20);
+        JTextField responsibleNameField = new JTextField(findValueByHeader(headers, data, "responsibleName"), 20);
+        JTextField evaluationField = new JTextField(findValueByHeader(headers, data, "evaluation"), 20);
+
+        // Array of labels and corresponding fields
+        Object[][] fields = {
+            {labels[0], nameField},
+            {labels[1], evaluationDateField},
+            {labels[2], responsibleNameField},
+            {labels[3], evaluationField}
+        };
+
         // Add labels and fields to the formPanel
-        JTextField[] fields = {nameField, evaluationDateField, responsibleNameField, evaluationField};
-        for (int i = 0; i < labels.length; i++) {
+        for (Object[] field : fields) {
             gbc.gridx = 0;
-            gbc.gridy = i;
-            gbc.weightx = 0.3;
-            formPanel.add(new JLabel(labels[i]), gbc);
-    
+            gbc.anchor = GridBagConstraints.CENTER;
+            formPanel.add(new JLabel((String) field[0]), gbc);
+
             gbc.gridx = 1;
-            gbc.weightx = 0.7;
-            formPanel.add(fields[i], gbc);
+            formPanel.add((Component) field[1], gbc);
+            
+            gbc.gridy++;
         }
-    
+
         // Store references to editable fields for later use
         formPanel.putClientProperty("fields", fields);
 
@@ -1204,7 +1271,7 @@ public class Main {
 
             gbc.gridx = 1;
             gbc.weightx = 0.7;
-            formPanel.add((Component) field[1], gbc); // Ensure casting to Component
+            formPanel.add((Component) field[1], gbc);
             row++;
         }
 
@@ -1218,7 +1285,7 @@ public class Main {
     private static String findValueByHeader(String[] headers, String[] data, String headerName) {
         for (int i = 0; i < headers.length; i++) {
             if (headers[i].equalsIgnoreCase(headerName)) {
-                return data[i];
+                return (i < data.length) ? data[i] : "";
             }
         }
         return "";
@@ -1399,33 +1466,27 @@ public class Main {
     }
 
     private static void updateEvaluationRecord(Object[] fields, String studentID) {
+        // Fix array indexing - fields array contains pairs of [label, component]
+        JTextField nameField = (JTextField) ((Object[])fields[0])[1];
+        JTextField evaluationDateField = (JTextField) ((Object[])fields[1])[1];
+        JTextField responsibleNameField = (JTextField) ((Object[])fields[2])[1];
+        JTextField evaluationField = (JTextField) ((Object[])fields[3])[1];
+
+        String updateQuery = String.format(
+            "UPDATE InternEvaluation SET " +
+            "name = '%s', " +
+            "evaluationDate = '%s', " +
+            "responsibleName = '%s', " +
+            "evaluation = '%s' " +
+            "WHERE studentID = '%s'",
+            nameField.getText().replace("'", "''"),
+            evaluationDateField.getText().replace("'", "''"),
+            responsibleNameField.getText().replace("'", "''"),
+            evaluationField.getText().replace("'", "''"),
+            studentID.replace("'", "''")
+        );
+
         try {
-            // Get the components directly from the fields array
-            Component[] components = new Component[fields.length];
-            for (int i = 0; i < fields.length; i++) {
-                components[i] = (Component) fields[i];
-            }
-
-            // Now extract the text from each field
-            String name = ((JTextField)components[0]).getText().trim();
-            String evaluationDate = ((JTextField)components[1]).getText().trim();
-            String responsibleName = ((JTextField)components[2]).getText().trim();
-            String evaluation = ((JTextField)components[3]).getText().trim();
-
-            String updateQuery = String.format(
-                "UPDATE InternEvaluation SET " +
-                "name = '%s', " +
-                "evaluationDate = '%s', " +
-                "responsibleName = '%s', " +
-                "evaluation = '%s' " +
-                "WHERE studentID = '%s'",
-                name.replace("'", "''"),
-                evaluationDate.replace("'", "''"),
-                responsibleName.replace("'", "''"),
-                evaluation.replace("'", "''"),
-                studentID.replace("'", "''")
-            );
-
             String result = SQLiteClient.sendQuery(updateQuery);
             if (result.startsWith("Update Count:")) {
                 SwingUtilities.invokeLater(() -> {
@@ -1442,92 +1503,114 @@ public class Main {
     }
 
     private static void updatePlaceEvaluationRecord(Object[] fields, String studentID) {
+        // Extract fields - each field is in a pair [label, component]
+        JTextField nameField = (JTextField) ((Object[])fields[0])[1];
+        JTextField institutionNameField = (JTextField) ((Object[])fields[1])[1];
+        JTextField durationField = (JTextField) ((Object[])fields[2])[1];
+        JComboBox<String> salaryCombo = (JComboBox<String>) ((Object[])fields[3])[1];
+        JComboBox<String> transportationCombo = (JComboBox<String>) ((Object[])fields[4])[1];
+        JComboBox<String> mealsCombo = (JComboBox<String>) ((Object[])fields[5])[1];
+        JComboBox<String> practiceTheoryCombo = (JComboBox<String>) ((Object[])fields[6])[1];
+        JComboBox<String> foreignLanguageCombo = (JComboBox<String>) ((Object[])fields[7])[1];
+        JTextField responsibilitiesField = (JTextField) ((Object[])fields[8])[1];
+        JTextField workingSpaceField = (JTextField) ((Object[])fields[9])[1];
+        JTextField factoryConditionsField = (JTextField) ((Object[])fields[10])[1];
+        JTextField recommendationField = (JTextField) ((Object[])fields[11])[1];
+        JTextField futureWorkField = (JTextField) ((Object[])fields[12])[1];
+        JSpinner processScoreSpinner = (JSpinner) ((Object[])fields[13])[1];
+        JSpinner decisionMakingSpinner = (JSpinner) ((Object[])fields[14])[1];
+        JSpinner expectationsSpinner = (JSpinner) ((Object[])fields[15])[1];
+        JSpinner researchDevelopmentSpinner = (JSpinner) ((Object[])fields[16])[1];
+        JScrollPane commentsScrollPane = (JScrollPane) ((Object[])fields[17])[1];
+        JScrollPane reasonScrollPane = (JScrollPane) ((Object[])fields[18])[1];
+        JScrollPane analysisMethodsScrollPane = (JScrollPane) ((Object[])fields[19])[1];
+        JScrollPane courseAssociationScrollPane = (JScrollPane) ((Object[])fields[20])[1];
+        JScrollPane workAssociationScrollPane = (JScrollPane) ((Object[])fields[21])[1];
+        JScrollPane knowledgeLacksScrollPane = (JScrollPane) ((Object[])fields[22])[1];
+        JScrollPane positiveAspectsScrollPane = (JScrollPane) ((Object[])fields[23])[1];
+        JScrollPane negativeAspectsScrollPane = (JScrollPane) ((Object[])fields[24])[1];
+
+        // Retrieve text from text areas
+        JTextArea commentsArea = (JTextArea) commentsScrollPane.getViewport().getView();
+        JTextArea reasonForChoiceArea = (JTextArea) reasonScrollPane.getViewport().getView();
+        JTextArea analysisMethodsLearnedArea = (JTextArea) analysisMethodsScrollPane.getViewport().getView();
+        JTextArea courseAssociationArea = (JTextArea) courseAssociationScrollPane.getViewport().getView();
+        JTextArea workAssociationArea = (JTextArea) workAssociationScrollPane.getViewport().getView();
+        JTextArea knowledgeLacksArea = (JTextArea) knowledgeLacksScrollPane.getViewport().getView();
+        JTextArea positiveAspectsArea = (JTextArea) positiveAspectsScrollPane.getViewport().getView();
+        JTextArea negativeAspectsArea = (JTextArea) negativeAspectsScrollPane.getViewport().getView();
+
+        // Input Validation
+        if (nameField.getText().trim().isEmpty() ||
+            institutionNameField.getText().trim().isEmpty() ||
+            durationField.getText().trim().isEmpty() ||
+            responsibilitiesField.getText().trim().isEmpty() ||
+            workingSpaceField.getText().trim().isEmpty() ||
+            factoryConditionsField.getText().trim().isEmpty() ||
+            recommendationField.getText().trim().isEmpty() ||
+            futureWorkField.getText().trim().isEmpty()) {
+            showInfoDialog("All fields except Student ID must be filled.");
+            return;
+        }
+
+        // Construct the UPDATE query
+        String updateQuery = String.format(
+            "UPDATE InternshipPlaceEvaluation SET " +
+            "name = '%s', " +
+            "institutionName = '%s', " +
+            "duration = '%s', " +
+            "salary = '%s', " +
+            "transportation = '%s', " +
+            "meals = '%s', " +
+            "practiceTheory = '%s', " +
+            "foreignLanguage = '%s', " +
+            "responsibilities = '%s', " +
+            "workingSpace = '%s', " +
+            "factoryConditions = '%s', " +
+            "recommendation = '%s', " +
+            "futureWork = '%s', " +
+            "processScore = '%s', " +
+            "decisionMaking = '%s', " +
+            "expectations = '%s', " +
+            "researchDevelopment = '%s', " +
+            "comments = '%s', " +
+            "reasonForChoice = '%s', " +
+            "analysisMethodsLearned = '%s', " +
+            "courseAssociation = '%s', " +
+            "workAssociation = '%s', " +
+            "knowledgeLacks = '%s', " +
+            "positiveAspects = '%s', " +
+            "negativeAspects = '%s' " +
+            "WHERE studentID = '%s'",
+            nameField.getText().replace("'", "''"),
+            institutionNameField.getText().replace("'", "''"),
+            durationField.getText().replace("'", "''"),
+            salaryCombo.getSelectedItem().toString().replace("'", "''"),
+            transportationCombo.getSelectedItem().toString().replace("'", "''"),
+            mealsCombo.getSelectedItem().toString().replace("'", "''"),
+            practiceTheoryCombo.getSelectedItem().toString().replace("'", "''"),
+            foreignLanguageCombo.getSelectedItem().toString().replace("'", "''"),
+            responsibilitiesField.getText().replace("'", "''"),
+            workingSpaceField.getText().replace("'", "''"),
+            factoryConditionsField.getText().replace("'", "''"),
+            recommendationField.getText().replace("'", "''"),
+            futureWorkField.getText().replace("'", "''"),
+            processScoreSpinner.getValue().toString().replace("'", "''"),
+            decisionMakingSpinner.getValue().toString().replace("'", "''"),
+            expectationsSpinner.getValue().toString().replace("'", "''"),
+            researchDevelopmentSpinner.getValue().toString().replace("'", "''"),
+            commentsArea.getText().replace("'", "''"),
+            reasonForChoiceArea.getText().replace("'", "''"),
+            analysisMethodsLearnedArea.getText().replace("'", "''"),
+            courseAssociationArea.getText().replace("'", "''"),
+            workAssociationArea.getText().replace("'", "''"),
+            knowledgeLacksArea.getText().replace("'", "''"),
+            positiveAspectsArea.getText().replace("'", "''"),
+            negativeAspectsArea.getText().replace("'", "''"),
+            studentID.replace("'", "''")
+        );
+
         try {
-            // Each field is stored as [label, component] pair in the fields array
-            String name = ((JTextField)((Object[])fields[0])[1]).getText().trim();
-            String institutionName = ((JTextField)((Object[])fields[1])[1]).getText().trim();
-            String duration = ((JTextField)((Object[])fields[2])[1]).getText().trim();
-            String salary = ((JComboBox<?>)((Object[])fields[3])[1]).getSelectedItem().toString();
-            String transportation = ((JComboBox<?>)((Object[])fields[4])[1]).getSelectedItem().toString();
-            String meals = ((JComboBox<?>)((Object[])fields[5])[1]).getSelectedItem().toString();
-            String practiceTheory = ((JComboBox<?>)((Object[])fields[6])[1]).getSelectedItem().toString();
-            String foreignLanguage = ((JComboBox<?>)((Object[])fields[7])[1]).getSelectedItem().toString();
-            String responsibilities = ((JTextField)((Object[])fields[8])[1]).getText().trim();
-            String workingSpace = ((JTextField)((Object[])fields[9])[1]).getText().trim();
-            String factoryConditions = ((JTextField)((Object[])fields[10])[1]).getText().trim();
-            String recommendation = ((JTextField)((Object[])fields[11])[1]).getText().trim();
-            String futureWork = ((JTextField)((Object[])fields[12])[1]).getText().trim();
-            String processScore = ((JSpinner)((Object[])fields[13])[1]).getValue().toString();
-            String decisionMaking = ((JSpinner)((Object[])fields[14])[1]).getValue().toString();
-            String expectations = ((JSpinner)((Object[])fields[15])[1]).getValue().toString();
-            String researchDevelopment = ((JSpinner)((Object[])fields[16])[1]).getValue().toString();
-            
-            // Text areas are inside JScrollPane
-            String comments = ((JTextArea)((JScrollPane)((Object[])fields[17])[1]).getViewport().getView()).getText().trim();
-            String reasonForChoice = ((JTextArea)((JScrollPane)((Object[])fields[18])[1]).getViewport().getView()).getText().trim();
-            String analysisMethodsLearned = ((JTextArea)((JScrollPane)((Object[])fields[19])[1]).getViewport().getView()).getText().trim();
-            String courseAssociation = ((JTextArea)((JScrollPane)((Object[])fields[20])[1]).getViewport().getView()).getText().trim();
-            String workAssociation = ((JTextArea)((JScrollPane)((Object[])fields[21])[1]).getViewport().getView()).getText().trim();
-            String knowledgeLacks = ((JTextArea)((JScrollPane)((Object[])fields[22])[1]).getViewport().getView()).getText().trim();
-            String positiveAspects = ((JTextArea)((JScrollPane)((Object[])fields[23])[1]).getViewport().getView()).getText().trim();
-            String negativeAspects = ((JTextArea)((JScrollPane)((Object[])fields[24])[1]).getViewport().getView()).getText().trim();
-
-            String updateQuery = String.format(
-                "UPDATE InternshipPlaceEvaluation SET " +
-                "name = '%s', " +
-                "institutionName = '%s', " +
-                "duration = '%s', " +
-                "salary = '%s', " +
-                "transportation = '%s', " +
-                "meals = '%s', " +
-                "practiceTheory = '%s', " +
-                "foreignLanguage = '%s', " +
-                "responsibilities = '%s', " +
-                "workingSpace = '%s', " +
-                "factoryConditions = '%s', " +
-                "recommendation = '%s', " +
-                "futureWork = '%s', " +
-                "processScore = '%s', " +
-                "decisionMaking = '%s', " +
-                "expectations = '%s', " +
-                "researchDevelopment = '%s', " +
-                "comments = '%s', " +
-                "reasonForChoice = '%s', " +
-                "analysisMethodsLearned = '%s', " +
-                "courseAssociation = '%s', " +
-                "workAssociation = '%s', " +
-                "knowledgeLacks = '%s', " +
-                "positiveAspects = '%s', " +
-                "negativeAspects = '%s' " +
-                "WHERE studentID = '%s'",
-                name.replace("'", "''"),
-                institutionName.replace("'", "''"),
-                duration.replace("'", "''"),
-                salary.replace("'", "''"),
-                transportation.replace("'", "''"),
-                meals.replace("'", "''"),
-                practiceTheory.replace("'", "''"),
-                foreignLanguage.replace("'", "''"),
-                responsibilities.replace("'", "''"),
-                workingSpace.replace("'", "''"),
-                factoryConditions.replace("'", "''"),
-                recommendation.replace("'", "''"),
-                futureWork.replace("'", "''"),
-                processScore.replace("'", "''"),
-                decisionMaking.replace("'", "''"),
-                expectations.replace("'", "''"),
-                researchDevelopment.replace("'", "''"),
-                comments.replace("'", "''"),
-                reasonForChoice.replace("'", "''"),
-                analysisMethodsLearned.replace("'", "''"),
-                courseAssociation.replace("'", "''"),
-                workAssociation.replace("'", "''"),
-                knowledgeLacks.replace("'", "''"),
-                positiveAspects.replace("'", "''"),
-                negativeAspects.replace("'", "''"),
-                studentID.replace("'", "''")
-            );
-
             String result = SQLiteClient.sendQuery(updateQuery);
             if (result.startsWith("Update Count:")) {
                 SwingUtilities.invokeLater(() -> {
@@ -1540,7 +1623,108 @@ public class Main {
             }
         } catch (Exception e) {
             showErrorDialog("Error occurred while updating the record.", e);
-            e.printStackTrace();
+        }
+    }
+
+    // **Implement the exportRecordToExcel method**
+    private static void exportRecordToExcel(Map<String, String> tableResults, String studentID) {
+        Workbook workbook = new XSSFWorkbook();
+        try {
+            for (Map.Entry<String, String> entry : tableResults.entrySet()) {
+                String tableName = entry.getKey();
+                String data = entry.getValue();
+
+                Sheet sheet = workbook.createSheet(tableName);
+
+                String[] rows = data.split("\n");
+                for (int i = 0; i < rows.length; i++) {
+                    Row row = sheet.createRow(i);
+                    String[] cells = rows[i].split("\t");
+                    for (int j = 0; j < cells.length; j++) {
+                        Cell cell = row.createCell(j);
+                        cell.setCellValue(cells[j]);
+                    }
+                }
+            }
+
+            // **Save the Excel file**
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Save Excel File");
+            fileChooser.setSelectedFile(new File("export_" + studentID + ".xlsx"));
+            int userSelection = fileChooser.showSaveDialog(frame);
+
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                File fileToSave = fileChooser.getSelectedFile();
+                try (FileOutputStream fileOut = new FileOutputStream(fileToSave)) {
+                    workbook.write(fileOut);
+                    showInfoDialog("Data exported successfully to " + fileToSave.getAbsolutePath());
+                }
+            }
+        } catch (IOException ex) {
+            showErrorDialog("Error occurred while exporting to Excel.", ex);
+        } finally {
+            try {
+                workbook.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // **Implement the exportAllFormsToExcel method**
+    private static void exportAllFormsToExcel() {
+        Workbook workbook = new XSSFWorkbook();
+        try {
+            // Define tables and their corresponding sheet names
+            Map<String, String> tables = new HashMap<>();
+            tables.put("InternshipAcceptance", "Internship Acceptance");
+            tables.put("InternEvaluation", "Intern Evaluation");
+            tables.put("InternshipPlaceEvaluation", "Internship Place Evaluation");
+
+            // Iterate through each table and populate sheets
+            for (Map.Entry<String, String> entry : tables.entrySet()) {
+                String tableName = entry.getKey();
+                String sheetName = entry.getValue();
+
+                String query = "SELECT * FROM " + tableName;
+                String queryResult = SQLiteClient.sendQuery(query);
+
+                if (queryResult != null && !queryResult.isEmpty()) {
+                    Sheet sheet = workbook.createSheet(sheetName);
+                    String[] rows = queryResult.split("\n");
+
+                    for (int i = 0; i < rows.length; i++) {
+                        Row row = sheet.createRow(i);
+                        String[] cells = rows[i].split("\t");
+                        for (int j = 0; j < cells.length; j++) {
+                            Cell cell = row.createCell(j);
+                            cell.setCellValue(cells[j]);
+                        }
+                    }
+                }
+            }
+
+            // **Save the Excel file**
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Save All Forms Excel File");
+            fileChooser.setSelectedFile(new File("AllFormsExport.xlsx"));
+            int userSelection = fileChooser.showSaveDialog(frame);
+
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                File fileToSave = fileChooser.getSelectedFile();
+                try (FileOutputStream fileOut = new FileOutputStream(fileToSave)) {
+                    workbook.write(fileOut);
+                    showInfoDialog("All forms exported successfully to " + fileToSave.getAbsolutePath());
+                }
+            }
+        } catch (IOException ex) {
+            showErrorDialog("Error occurred while exporting all forms to Excel.", ex);
+        } finally {
+            try {
+                workbook.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
