@@ -96,7 +96,33 @@ class SQLiteServer {
             String createEvaluationTable = "CREATE TABLE IF NOT EXISTS InternEvaluation (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, studentID TEXT, evaluationDate TEXT, responsibleName TEXT, evaluation TEXT)";
             String createPlaceEvaluationTable = "CREATE TABLE IF NOT EXISTS InternshipPlaceEvaluation (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, studentID TEXT, institutionName TEXT, duration TEXT, feedback TEXT)";
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "name TEXT, " +
+                    "studentID TEXT, " +
+                    "institutionName TEXT, " +
+                    "duration TEXT, " +
+                    "salary TEXT, " +
+                    "transportation TEXT, " +
+                    "meals TEXT, " +
+                    "practiceTheory TEXT, " +
+                    "foreignLanguage TEXT, " +
+                    "responsibilities TEXT, " +
+                    "workingSpace TEXT, " +
+                    "factoryConditions TEXT, " +
+                    "recommendation TEXT, " +
+                    "futureWork TEXT, " +
+                    "processScore TEXT, " +
+                    "decisionMaking TEXT, " +
+                    "expectations TEXT, " +
+                    "researchDevelopment TEXT, " +
+                    "comments TEXT, " +
+                    "reasonForChoice TEXT, " +
+                    "analysisMethodsLearned TEXT, " +
+                    "courseAssociation TEXT, " +
+                    "workAssociation TEXT, " +
+                    "knowledgeLacks TEXT, " +
+                    "positiveAspects TEXT, " +
+                    "negativeAspects TEXT)";
             String createInstructorsTable = "CREATE TABLE IF NOT EXISTS instructors (" +
                     "instructorId INTEGER PRIMARY KEY, password TEXT)";
             conn.createStatement().execute(createAcceptanceTable);
@@ -353,32 +379,276 @@ public class Main {
     }
 
     private static JPanel createPlaceEvaluationFormPanel() {
-        return createFormPanel(new String[]{
-                "Name-Surname:", "Student ID:", "Institution Name:", "Duration:", "Feedback:"
-        }, "InternshipPlaceEvaluation", values -> {
-            // Input Validation
-            String nameSurname = values[0].trim();
-            String studentId = values[1].trim();
-            String institutionName = values[2].trim();
-            String duration = values[3].trim();
-            String feedback = values[4].trim();
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-            if (nameSurname.isEmpty() || studentId.isEmpty() || institutionName.isEmpty() ||
-                duration.isEmpty() || feedback.isEmpty()) {
-                showInfoDialog("Please fill all the required fields.");
+        // Create a panel for the form with GridBagLayout
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(5, 5, 5, 5);
+
+        // Basic information fields
+        String[] basicLabels = {"Name-Surname:", "Student ID:", "Institution Name:", "Duration:"};
+        JTextField[] basicFields = new JTextField[basicLabels.length];
+        
+        // Add basic information fields
+        for (int i = 0; i < basicLabels.length; i++) {
+            gbc.gridx = 0;
+            gbc.gridy = i;
+            gbc.gridwidth = 1;
+            
+            // Create panel for label to ensure left alignment
+            JPanel labelPanel = new JPanel(new BorderLayout());
+            JLabel label = new JLabel(basicLabels[i]);
+            labelPanel.add(label, BorderLayout.WEST);
+            labelPanel.setBackground(formPanel.getBackground());
+            gbc.anchor = GridBagConstraints.WEST;
+            formPanel.add(labelPanel, gbc);
+
+            gbc.gridx = 1;
+            gbc.gridwidth = 1;
+            basicFields[i] = new JTextField(20);
+            formPanel.add(basicFields[i], gbc);
+        }
+
+        // Salary field with Yes/No combo box
+        gbc.gridy++;
+        gbc.gridx = 0;
+        gbc.gridwidth = 1;
+        JPanel salaryLabelPanel = new JPanel(new BorderLayout());
+        salaryLabelPanel.add(new JLabel("Was any salary paid?:"), BorderLayout.WEST);
+        salaryLabelPanel.setBackground(formPanel.getBackground());
+        formPanel.add(salaryLabelPanel, gbc);
+
+        gbc.gridx = 1;
+        JComboBox<String> salaryCombo = new JComboBox<>(new String[]{"Yes", "No"});
+        salaryCombo.setPreferredSize(new Dimension(150, salaryCombo.getPreferredSize().height));
+        formPanel.add(salaryCombo, gbc);
+
+        // Evaluation questions with combo boxes
+        String[] evaluationQuestions = {
+            "Was any transportation opportunity provided?",
+            "Was any meal opportunity provided?",
+            "Were you able to practice the theoretical knowledge?",
+            "Were you able to use your foreign languages?",
+            "Did your foreign language level help you carry out your responsibilities?",
+            "Were you provided with an individual working place?",
+            "Factory/workshop conditions:",
+            "Would you suggest this institution to your friends?",
+            "Would you want to work at this institution after graduation?"
+        };
+
+        String[] evaluationOptions = {"Hiç/Never", "Az/Little", "Orta/Moderately", "Çok/Very much"};
+        JComboBox<String>[] evaluationCombos = new JComboBox[evaluationQuestions.length];
+
+        // Add evaluation questions with combo boxes
+        for (int i = 0; i < evaluationQuestions.length; i++) {
+            gbc.gridy++;
+            gbc.gridx = 0;
+            gbc.gridwidth = 1;
+            
+            // Create panel for label to ensure left alignment
+            JPanel labelPanel = new JPanel(new BorderLayout());
+            JLabel label = new JLabel(evaluationQuestions[i]);
+            labelPanel.add(label, BorderLayout.WEST);
+            labelPanel.setBackground(formPanel.getBackground());
+            formPanel.add(labelPanel, gbc);
+
+            gbc.gridx = 1;
+            evaluationCombos[i] = new JComboBox<>(evaluationOptions);
+            evaluationCombos[i].setPreferredSize(new Dimension(150, evaluationCombos[i].getPreferredSize().height));
+            formPanel.add(evaluationCombos[i], gbc);
+        }
+
+        // Score fields (1-5)
+        String[] scoreLabels = {
+            "Internship process score (1-5):",
+            "Decision making score (1-5):",
+            "Expectations met score (1-5):",
+            "Research and development contribution score (1-5):"
+        };
+        JSpinner[] scoreSpinners = new JSpinner[scoreLabels.length];
+
+        // Add score fields with spinners
+        for (int i = 0; i < scoreLabels.length; i++) {
+            gbc.gridy++;
+            gbc.gridx = 0;
+            gbc.gridwidth = 1;
+            
+            JPanel labelPanel = new JPanel(new BorderLayout());
+            JLabel label = new JLabel(scoreLabels[i]);
+            labelPanel.add(label, BorderLayout.WEST);
+            labelPanel.setBackground(formPanel.getBackground());
+            formPanel.add(labelPanel, gbc);
+
+            gbc.gridx = 1;
+            SpinnerNumberModel spinnerModel = new SpinnerNumberModel(1, 1, 5, 1);
+            scoreSpinners[i] = new JSpinner(spinnerModel);
+            scoreSpinners[i].setPreferredSize(new Dimension(150, scoreSpinners[i].getPreferredSize().height));
+            formPanel.add(scoreSpinners[i], gbc);
+        }
+
+        // After the score spinners section, add text areas
+        String[] textAreaLabels = {
+            "Please state your comments and suggestions:",
+            "What is your reason in choosing the named institution for your internship?",
+            "At the institution I performed my internship, I learned to use the analysis methods (optimization techniques, statistical analysis techniques, design etc.) I was thought in the education program:",
+            "I was able to associate the courses I took during my education...",
+            "... with the works",
+            "During the internship process, I realized that I have lack of knowledge in the subjects such as...",
+            "Identify the 3 most positive aspects of the institution you performed your internship at:",
+            "Identify the 3 most negative aspects of the institution you performed your internship at:"
+        };
+
+        // Add text areas
+        JTextArea[] textAreas = new JTextArea[textAreaLabels.length];
+        
+        for (int i = 0; i < textAreaLabels.length; i++) {
+            gbc.gridy++;
+            gbc.gridx = 0;
+            gbc.gridwidth = 3; // Span across all columns
+            
+            // Create panel for label to ensure left alignment
+            JPanel labelPanel = new JPanel(new BorderLayout());
+            JLabel label = new JLabel(textAreaLabels[i]);
+            label.setHorizontalAlignment(SwingConstants.LEFT);
+            labelPanel.add(label, BorderLayout.WEST);
+            labelPanel.setBackground(formPanel.getBackground()); // Match parent background
+            formPanel.add(labelPanel, gbc);
+
+            gbc.gridy++;
+            // Create and configure text area
+            textAreas[i] = new JTextArea(4, 40); // 4 rows, 40 columns
+            textAreas[i].setLineWrap(true);
+            textAreas[i].setWrapStyleWord(true);
+            
+            // Add scrolling to text area
+            JScrollPane scrollPane = new JScrollPane(textAreas[i]);
+            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+            
+            // Add some margin between label and text area
+            gbc.insets = new Insets(2, 5, 10, 5);
+            formPanel.add(scrollPane, gbc);
+            // Reset insets for next components
+            gbc.insets = new Insets(5, 5, 5, 5);
+        }
+
+        // Buttons Panel
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        JButton submitButton = new JButton("Submit");
+        JButton deleteButton = new JButton("Delete Record");
+        JButton searchButton = new JButton("Search/Edit");
+        JButton logoutButton = new JButton("Logout");
+        
+        // Style the logout button
+        logoutButton.setBackground(Color.RED);
+        logoutButton.setForeground(Color.WHITE);
+
+        // Add action listeners
+        submitButton.addActionListener(e -> {
+            // Gather all form data
+            List<String> formDataList = new ArrayList<>();
+            
+            // Add basic fields
+            for (int i = 0; i < basicFields.length; i++) {
+                formDataList.add(basicFields[i].getText().trim());
+            }
+            
+            // Add salary selection
+            formDataList.add((String) salaryCombo.getSelectedItem());
+            
+            // Add evaluation combo selections
+            for (JComboBox<String> combo : evaluationCombos) {
+                formDataList.add((String) combo.getSelectedItem());
+            }
+            
+            // Add scores
+            for (JSpinner spinner : scoreSpinners) {
+                formDataList.add(spinner.getValue().toString());
+            }
+            
+            // Add text area contents
+            for (JTextArea textArea : textAreas) {
+                formDataList.add(textArea.getText().trim());
+            }
+
+            String[] formData = formDataList.toArray(new String[0]);
+
+            // Validate and save
+            if (!validateFormData(formData)) {
+                showInfoDialog("Please fill all required fields.");
                 return;
             }
 
-            if (!isNumeric(studentId)) {
-                showInfoDialog("Student ID must be a number.");
-                return;
-            }
-
-            // Proceed to save the form data
-            executorService.execute(() -> savePlaceEvaluationForm(
-                    nameSurname, studentId, institutionName, duration, feedback
-            ));
+            executorService.execute(() -> savePlaceEvaluationForm(formData));
         });
+
+        deleteButton.addActionListener(e -> {
+            String inputId = JOptionPane.showInputDialog(null, "Enter the Student ID of the record to delete:");
+            if (inputId != null && !inputId.trim().isEmpty()) {
+                if (!isNumeric(inputId.trim())) {
+                    showInfoDialog("Student ID must be a number.");
+                    return;
+                }
+                executorService.execute(() -> deleteFromDatabase("InternshipPlaceEvaluation", inputId.trim()));
+            }
+        });
+
+        searchButton.addActionListener(e -> {
+            String studentID = JOptionPane.showInputDialog(frame, "Enter the Student ID to search/edit:");
+            if (studentID != null && !studentID.trim().isEmpty()) {
+                if (!isNumeric(studentID.trim())) {
+                    showInfoDialog("Student ID must be a number.");
+                    return;
+                }
+                executorService.execute(() -> searchInDatabase("InternshipPlaceEvaluation", studentID.trim()));
+            }
+        });
+
+        logoutButton.addActionListener(e -> {
+            int option = JOptionPane.showConfirmDialog(null, "Are you sure you want to logout?", "Logout", JOptionPane.YES_NO_OPTION);
+            if (option == JOptionPane.YES_OPTION) {
+                frame.dispose();
+                showLoginScreen();
+            }
+        });
+
+        buttonsPanel.add(submitButton);
+        buttonsPanel.add(deleteButton);
+        buttonsPanel.add(searchButton);
+        buttonsPanel.add(logoutButton);
+
+        // Add components to main panel
+        JScrollPane scrollPane = new JScrollPane(formPanel);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        mainPanel.add(buttonsPanel, BorderLayout.SOUTH);
+
+        return mainPanel;
+    }
+
+    // Helper method to create wrapped labels
+    private static JLabel createWrappedLabel(String text) {
+        JLabel label = new JLabel("<html><body style='width: 200px'>" + text + "</body></html>", SwingConstants.RIGHT);
+        return label;
+    }
+
+    // Helper method to validate form data
+    private static boolean validateFormData(String[] formData) {
+        // Check basic fields
+        for (int i = 0; i < 4; i++) {
+            if (formData[i].isEmpty()) {
+                return false;
+            }
+        }
+        
+        // Check student ID is numeric
+        if (!isNumeric(formData[1])) {
+            showInfoDialog("Student ID must be a number.");
+            return false;
+        }
+
+        return true;
     }
 
     private static JPanel createFormPanel(String[] labels, String tableName, FormSubmitListener submitListener) {
@@ -631,22 +901,25 @@ public class Main {
         }
     }
 
-    private static void savePlaceEvaluationForm(String name, String studentID, String institutionName,
-                                                String duration, String feedback) {
-        String insertQuery = String.format(
-                "INSERT INTO InternshipPlaceEvaluation (name, studentID, institutionName, duration, feedback) " +
-                        "VALUES ('%s', '%s', '%s', '%s', '%s')",
-                name.replace("'", "''"), // Escape single quotes
-                studentID.replace("'", "''"),
-                institutionName.replace("'", "''"),
-                duration.replace("'", "''"),
-                feedback.replace("'", "''")
-        );
-
-        try {
-            String result = SQLiteClient.sendQuery(insertQuery); // Send the query to the server
-
-            if (result.contains("UNIQUE constraint failed")) {
+    private static void savePlaceEvaluationForm(String[] values) {
+        StringBuilder queryBuilder = new StringBuilder();
+        queryBuilder.append("INSERT INTO InternshipPlaceEvaluation (name, studentID, institutionName, duration, ");
+        queryBuilder.append("salary, transportation, meals, practiceTheory, foreignLanguage, responsibilities, ");
+        queryBuilder.append("workingSpace, factoryConditions, recommendation, futureWork, processScore, ");
+        queryBuilder.append("decisionMaking, expectations, researchDevelopment, comments, reasonForChoice, ");
+        queryBuilder.append("analysisMethodsLearned, courseAssociation, workAssociation, knowledgeLacks, ");
+        queryBuilder.append("positiveAspects, negativeAspects) VALUES ('");
+        
+        // Escape all values and join them
+        String escapedValues = String.join("', '", 
+            java.util.Arrays.stream(values)
+                .map(v -> v.replace("'", "''"))
+                .toArray(String[]::new));
+        
+        queryBuilder.append(escapedValues).append("')");
+         try {
+            String result = SQLiteClient.sendQuery(queryBuilder.toString());
+             if (result.contains("UNIQUE constraint failed")) {
                 SwingUtilities.invokeLater(() -> {
                     showInfoDialog("A record with this Student ID already exists. Please use the Search/Edit feature to modify the existing record.");
                 });
@@ -654,24 +927,6 @@ public class Main {
                 SwingUtilities.invokeLater(() -> {
                     showErrorDialog("Error occurred while saving the record. " + result, null);
                 });
-            } else if (result.startsWith("Update Count:")) {
-                String[] parts = result.split(":");
-                if (parts.length == 2) {
-                    String countStr = parts[1].trim();
-                    if (countStr.equals("1")) {
-                        SwingUtilities.invokeLater(() -> {
-                            showInfoDialog("Record saved successfully.");
-                        });
-                    } else {
-                        SwingUtilities.invokeLater(() -> {
-                            showInfoDialog("Record saved. Rows affected: " + countStr);
-                        });
-                    }
-                } else {
-                    SwingUtilities.invokeLater(() -> {
-                        showInfoDialog("Record saved successfully.");
-                    });
-                }
             } else {
                 SwingUtilities.invokeLater(() -> {
                     showInfoDialog("Record saved successfully.");
@@ -679,23 +934,16 @@ public class Main {
             }
         } catch (Exception e) {
             showErrorDialog("Error occurred while communicating with the server.", e);
-        }
+        } 
     }
 
     private static void searchInDatabase(String tableName, String studentID) {
         try {
-            // Query for all relevant tables
-            String acceptanceQuery = "SELECT * FROM InternshipAcceptance WHERE studentID = '" + studentID + "'";
-            String evaluationQuery = "SELECT * FROM InternEvaluation WHERE studentID = '" + studentID + "'";
-            String placeEvaluationQuery = "SELECT * FROM InternshipPlaceEvaluation WHERE studentID = '" + studentID + "'";
-            // Send each query to the server
-            String acceptanceResult = SQLiteClient.sendQuery(acceptanceQuery);
-            String evaluationResult = SQLiteClient.sendQuery(evaluationQuery);
-            String placeEvaluationResult = SQLiteClient.sendQuery(placeEvaluationQuery);
-            boolean hasData = acceptanceResult.contains("\n") || evaluationResult.contains("\n") || placeEvaluationResult.contains("\n");
-
-            if (!hasData) {
-                // Show "No Records Found" dialog
+            // Create query based on table name
+            String query = "SELECT * FROM " + tableName + " WHERE studentID = '" + studentID + "'";
+            String result = SQLiteClient.sendQuery(query);
+    
+            if (!result.contains("\n")) {
                 SwingUtilities.invokeLater(() -> {
                     JDialog dialog = new JDialog(frame, "Search Results for Student ID: " + studentID, true);
                     dialog.setSize(400, 200);
@@ -708,150 +956,302 @@ public class Main {
                 });
                 return;
             }
-            // Create a JTabbedPane to display results
-            JTabbedPane tabbedPane = new JTabbedPane();
-            // Add Internship Acceptance Tab
-            if (!acceptanceResult.trim().isEmpty()) {
-                JTable acceptanceTable = buildTableFromServerResponse(acceptanceResult);
-                JScrollPane acceptanceScrollPane = new JScrollPane(acceptanceTable);
-                tabbedPane.addTab("Internship Acceptance", acceptanceScrollPane);
-            } else {
-                tabbedPane.addTab("Internship Acceptance", new JLabel("No data found.", SwingConstants.CENTER));
-            }
-            // Add Intern Evaluation Tab
-            if (!evaluationResult.trim().isEmpty()) {
-                JTable evaluationTable = buildTableFromServerResponse(evaluationResult);
-                JScrollPane evaluationScrollPane = new JScrollPane(evaluationTable);
-                tabbedPane.addTab("Intern Evaluation", evaluationScrollPane);
-            } else {
-                tabbedPane.addTab("Intern Evaluation", new JLabel("No data found.", SwingConstants.CENTER));
-            }
-            // Add Internship Place Evaluation Tab
-            if (!placeEvaluationResult.trim().isEmpty()) {
-                JTable placeEvaluationTable = buildTableFromServerResponse(placeEvaluationResult);
-                JScrollPane placeEvaluationScrollPane = new JScrollPane(placeEvaluationTable);
-                tabbedPane.addTab("Place Evaluation", placeEvaluationScrollPane);
-            } else {
-                tabbedPane.addTab("Place Evaluation", new JLabel("No data found.", SwingConstants.CENTER));
-            }
-            // Create Update Button
-            JButton updateButton = new JButton("Update");
-            updateButton.addActionListener(e -> updateStudentData(tabbedPane, studentID));
-            // Panel to hold tabbedPane and update button
-            JPanel panel = new JPanel(new BorderLayout());
-            panel.add(tabbedPane, BorderLayout.CENTER);
-            panel.add(updateButton, BorderLayout.SOUTH);
-            // Show the panel in a dialog
+    
+            // Parse the data
+            String[] rows = result.split("\n");
+            String[] headers = rows[0].split("\t");
+            String[] data = rows[1].split("\t");
+    
+            // Create dialog based on table type
             SwingUtilities.invokeLater(() -> {
                 JDialog dialog = new JDialog(frame, "Search Results for Student ID: " + studentID, true);
+                dialog.setLayout(new BorderLayout(10, 10));
                 dialog.setSize(800, 600);
-                dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-                dialog.getContentPane().add(panel);
-                dialog.pack();
+    
+                JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+                mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    
+                // Create content based on table type
+                JPanel formContentPanel;
+                switch (tableName) {
+                    case "InternshipAcceptance":
+                        formContentPanel = createAcceptanceSearchPanel(headers, data);
+                        break;
+                    case "InternEvaluation":
+                        formContentPanel = createEvaluationSearchPanel(headers, data);
+                        break;
+                    case "InternshipPlaceEvaluation":
+                        formContentPanel = createPlaceEvaluationSearchPanel(headers, data);
+                        break;
+                    default:
+                        formContentPanel = new JPanel();
+                }
+    
+                // Add formContentPanel to JScrollPane
+                JScrollPane scrollPane = new JScrollPane(formContentPanel);
+                mainPanel.add(scrollPane, BorderLayout.CENTER);
+    
+                // Add update button
+                JButton updateButton = new JButton("Update");
+                updateButton.addActionListener(e -> {
+                    // Retrieve editable fields
+                    Object[] fields = (Object[]) formContentPanel.getClientProperty("fields");
+                    try {
+                        switch (tableName) {
+                            case "InternshipAcceptance":
+                                updateAcceptanceRecord(fields, studentID);
+                                break;
+                            case "InternEvaluation":
+                                updateEvaluationRecord(fields, studentID);
+                                break;
+                            case "InternshipPlaceEvaluation":
+                                updatePlaceEvaluationRecord(fields, studentID);
+                                break;
+                        }
+                        dialog.dispose();
+                    } catch (Exception ex) {
+                        showErrorDialog("Error occurred while updating the record.", ex);
+                    }
+                });
+                JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+                buttonPanel.add(updateButton);
+    
+                mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+    
+                dialog.add(mainPanel);
                 dialog.setLocationRelativeTo(frame);
                 dialog.setVisible(true);
             });
+    
         } catch (Exception e) {
             showErrorDialog("Error occurred while searching.", e);
         }
     }
 
-    private static JTable buildTableFromServerResponse(String serverResponse) {
-        // Parse the server response into rows and columns
-        String[] rows = serverResponse.split("\n");
-        if (rows.length < 2) { // At least headers and one row
-            return new JTable(); // Return an empty table if no data
+    // Helper method for Internship Acceptance form results
+    private static JPanel createAcceptanceSearchPanel(String[] headers, String[] data) {
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // Define the fields
+        String[] labels = {"Name-Surname:", "Faculty:", "Dates:", "Institution Name:", "Institution Address:", "Institution Phone:", "Responsible Name:"};
+        JTextField nameField = new JTextField(findValueByHeader(headers, data, "name"));
+        JTextField facultyField = new JTextField(findValueByHeader(headers, data, "faculty"));
+        JTextField datesField = new JTextField(findValueByHeader(headers, data, "dates"));
+        JTextField institutionNameField = new JTextField(findValueByHeader(headers, data, "institutionName"));
+        JTextField institutionAddressField = new JTextField(findValueByHeader(headers, data, "institutionAddress"));
+        JTextField institutionPhoneField = new JTextField(findValueByHeader(headers, data, "institutionPhone"));
+        JTextField responsibleNameField = new JTextField(findValueByHeader(headers, data, "responsibleName"));
+
+        // Add labels and fields to the formPanel
+        Object[][] fields = {
+            {labels[0], nameField},
+            {labels[1], facultyField},
+            {labels[2], datesField},
+            {labels[3], institutionNameField},
+            {labels[4], institutionAddressField},
+            {labels[5], institutionPhoneField},
+            {labels[6], responsibleNameField}
+        };
+
+        int row = 0;
+        for (Object[] field : fields) {
+            gbc.gridx = 0;
+            gbc.gridy = row;
+            gbc.weightx = 0.3;
+            formPanel.add(new JLabel((String) field[0]), gbc);
+
+            gbc.gridx = 1;
+            gbc.weightx = 0.7;
+            formPanel.add((Component) field[1], gbc); // Ensure casting to Component
+            row++;
         }
-        String[] allColumns = rows[0].split("\t"); // First line contains column headers
-        List<String> columnsList = new ArrayList<>();
-        // Exclude 'id' column
-        int idColumnIndex = -1;
-        for (int i = 0; i < allColumns.length; i++) {
-            if (allColumns[i].equalsIgnoreCase("id")) {
-                idColumnIndex = i;
-                continue; // Skip adding 'id' to columnsList
-            }
-            columnsList.add(allColumns[i]);
-        }
-        String[] columns = columnsList.toArray(new String[0]);
-        // Prepare data excluding the 'id' column
-        String[][] data = new String[rows.length - 1][columns.length];
-        for (int i = 1; i < rows.length; i++) {
-            String[] rowData = rows[i].split("\t");
-            for (int j = 0; j < columns.length; j++) {
-                if (idColumnIndex != -1 && j >= idColumnIndex) {
-                    data[i - 1][j] = rowData[j + 1]; // Shift by 1 if 'id' is present
-                } else {
-                    data[i - 1][j] = rowData[j];
-                }
-            }
-        }
-        // Create and return the JTable
-        return new JTable(new EditableTableModel(data, columns));
+
+        // Store references to editable fields for later use
+        formPanel.putClientProperty("fields", fields);
+
+        return formPanel;
     }
 
-    private static void updateStudentData(JTabbedPane tabbedPane, String studentID) {
-        int selectedTabIndex = tabbedPane.getSelectedIndex();
-        String selectedTabTitle = tabbedPane.getTitleAt(selectedTabIndex);
-        JTable table = null;
-        String updateQuery = "";
-        // Determine which table to update based on the selected tab
-        if (selectedTabTitle.equals("Internship Acceptance")) {
-            table = (JTable) ((JScrollPane) tabbedPane.getComponentAt(selectedTabIndex)).getViewport().getView();
-            updateQuery = "UPDATE InternshipAcceptance SET ";
-        } else if (selectedTabTitle.equals("Intern Evaluation")) {
-            table = (JTable) ((JScrollPane) tabbedPane.getComponentAt(selectedTabIndex)).getViewport().getView();
-            updateQuery = "UPDATE InternEvaluation SET ";
-        } else if (selectedTabTitle.equals("Place Evaluation")) {
-            table = (JTable) ((JScrollPane) tabbedPane.getComponentAt(selectedTabIndex)).getViewport().getView();
-            updateQuery = "UPDATE InternshipPlaceEvaluation SET ";
-        } else {
-            JOptionPane.showMessageDialog(null, "Unknown tab selected.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
+    // Helper method for Intern Evaluation form results
+    private static JPanel createEvaluationSearchPanel(String[] headers, String[] data) {
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+    
+        // Define the fields
+        String[] labels = {"Name-Surname:", "Evaluation Date:", "Responsible Name:", "Evaluation:"};
+        JTextField nameField = new JTextField(findValueByHeader(headers, data, "name"));
+        JTextField evaluationDateField = new JTextField(findValueByHeader(headers, data, "evaluationDate"));
+        JTextField responsibleNameField = new JTextField(findValueByHeader(headers, data, "responsibleName"));
+        JTextField evaluationField = new JTextField(findValueByHeader(headers, data, "evaluation"));
+    
+        // Add labels and fields to the formPanel
+        JTextField[] fields = {nameField, evaluationDateField, responsibleNameField, evaluationField};
+        for (int i = 0; i < labels.length; i++) {
+            gbc.gridx = 0;
+            gbc.gridy = i;
+            gbc.weightx = 0.3;
+            formPanel.add(new JLabel(labels[i]), gbc);
+    
+            gbc.gridx = 1;
+            gbc.weightx = 0.7;
+            formPanel.add(fields[i], gbc);
         }
-        final JTable finalTable = table; // Make 'table' final for use in lambda
-        final String finalUpdateQuery = updateQuery; // Make 'updateQuery' final
-        if (finalTable != null && finalTable.getRowCount() > 0) {
-            executorService.execute(() -> updateTableData(finalTable, finalUpdateQuery, studentID));
-        } else {
-            JOptionPane.showMessageDialog(null, "No data to update in the selected tab.", "Info", JOptionPane.INFORMATION_MESSAGE);
-        }
+    
+        // Store references to editable fields for later use
+        formPanel.putClientProperty("fields", fields);
+
+        return formPanel;
     }
 
-    private static void updateTableData(JTable table, String updateQuery, String studentID) {
-        EditableTableModel model = (EditableTableModel) table.getModel();
-        // Ensure only one record per studentID
-        if (model.getRowCount() != 1) {
-            SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(null, "Multiple records found. Update is not supported for multiple records.", "Error", JOptionPane.ERROR_MESSAGE);
-            });
-            return;
+    // Helper method for Place Evaluation form results
+    private static JPanel createPlaceEvaluationSearchPanel(String[] headers, String[] data) {
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // Define labels and corresponding fields
+        String[] labels = {
+            "Name-Surname:", "Institution Name:", "Duration:",
+            "Salary Paid:", "Transportation Provided:", "Meals Provided:", "Practice Theory:",
+            "Foreign Language Use:", "Responsibilities:", "Working Space:", "Factory Conditions:",
+            "Recommendation:", "Future Work:", "Process Score:", "Decision Making:",
+            "Expectations:", "Research Development:", "Comments:",
+            "Reason for Choice:", "Analysis Methods Learned:", "Course Association:",
+            "Work Association:", "Knowledge Lacks:", "Positive Aspects:", "Negative Aspects:"
+        };
+
+        // Initialize fields
+        JTextField nameField = new JTextField(findValueByHeader(headers, data, "name"));
+        JTextField institutionNameField = new JTextField(findValueByHeader(headers, data, "institutionName"));
+        JTextField durationField = new JTextField(findValueByHeader(headers, data, "duration"));
+
+        JComboBox<String> salaryCombo = new JComboBox<>(new String[]{"Yes", "No"});
+        salaryCombo.setSelectedItem(findValueByHeader(headers, data, "salary"));
+
+        JComboBox<String> transportationCombo = new JComboBox<>(new String[]{"Hiç/Never", "Az/Little", "Orta/Moderately", "Çok/Very much"});
+        transportationCombo.setSelectedItem(findValueByHeader(headers, data, "transportation"));
+
+        JComboBox<String> mealsCombo = new JComboBox<>(new String[]{"Hiç/Never", "Az/Little", "Orta/Moderately", "Çok/Very much"});
+        mealsCombo.setSelectedItem(findValueByHeader(headers, data, "meals"));
+
+        JComboBox<String> practiceTheoryCombo = new JComboBox<>(new String[]{"Hiç/Never", "Az/Little", "Orta/Moderately", "Çok/Very much"});
+        practiceTheoryCombo.setSelectedItem(findValueByHeader(headers, data, "practiceTheory"));
+
+        JComboBox<String> foreignLanguageCombo = new JComboBox<>(new String[]{"Hiç/Never", "Az/Little", "Orta/Moderately", "Çok/Very much"});
+        foreignLanguageCombo.setSelectedItem(findValueByHeader(headers, data, "foreignLanguage"));
+
+        JTextField responsibilitiesField = new JTextField(findValueByHeader(headers, data, "responsibilities"));
+        JTextField workingSpaceField = new JTextField(findValueByHeader(headers, data, "workingSpace"));
+        JTextField factoryConditionsField = new JTextField(findValueByHeader(headers, data, "factoryConditions"));
+        JTextField recommendationField = new JTextField(findValueByHeader(headers, data, "recommendation"));
+        JTextField futureWorkField = new JTextField(findValueByHeader(headers, data, "futureWork"));
+
+        JSpinner processScoreSpinner = new JSpinner(new SpinnerNumberModel(Integer.parseInt(findValueByHeader(headers, data, "processScore")), 1, 5, 1));
+        JSpinner decisionMakingSpinner = new JSpinner(new SpinnerNumberModel(Integer.parseInt(findValueByHeader(headers, data, "decisionMaking")), 1, 5, 1));
+        JSpinner expectationsSpinner = new JSpinner(new SpinnerNumberModel(Integer.parseInt(findValueByHeader(headers, data, "expectations")), 1, 5, 1));
+        JSpinner researchDevelopmentSpinner = new JSpinner(new SpinnerNumberModel(Integer.parseInt(findValueByHeader(headers, data, "researchDevelopment")), 1, 5, 1));
+
+        JTextArea commentsArea = new JTextArea(findValueByHeader(headers, data, "comments"));
+        JTextArea reasonForChoiceArea = new JTextArea(findValueByHeader(headers, data, "reasonForChoice"));
+        JTextArea analysisMethodsLearnedArea = new JTextArea(findValueByHeader(headers, data, "analysisMethodsLearned"));
+        JTextArea courseAssociationArea = new JTextArea(findValueByHeader(headers, data, "courseAssociation"));
+        JTextArea workAssociationArea = new JTextArea(findValueByHeader(headers, data, "workAssociation"));
+        JTextArea knowledgeLacksArea = new JTextArea(findValueByHeader(headers, data, "knowledgeLacks"));
+        JTextArea positiveAspectsArea = new JTextArea(findValueByHeader(headers, data, "positiveAspects"));
+        JTextArea negativeAspectsArea = new JTextArea(findValueByHeader(headers, data, "negativeAspects"));
+
+        // Add labels and fields to the formPanel
+        Object[][] fields = {
+            {labels[0], nameField},
+            {labels[1], institutionNameField},
+            {labels[2], durationField},
+            {labels[3], salaryCombo},
+            {labels[4], transportationCombo},
+            {labels[5], mealsCombo},
+            {labels[6], practiceTheoryCombo},
+            {labels[7], foreignLanguageCombo},
+            {labels[8], responsibilitiesField},
+            {labels[9], workingSpaceField},
+            {labels[10], factoryConditionsField},
+            {labels[11], recommendationField},
+            {labels[12], futureWorkField},
+            {labels[13], processScoreSpinner},
+            {labels[14], decisionMakingSpinner},
+            {labels[15], expectationsSpinner},
+            {labels[16], researchDevelopmentSpinner},
+            {labels[17], new JScrollPane(commentsArea)},
+            {labels[18], new JScrollPane(reasonForChoiceArea)},
+            {labels[19], new JScrollPane(analysisMethodsLearnedArea)},
+            {labels[20], new JScrollPane(courseAssociationArea)},
+            {labels[21], new JScrollPane(workAssociationArea)},
+            {labels[22], new JScrollPane(knowledgeLacksArea)},
+            {labels[23], new JScrollPane(positiveAspectsArea)},
+            {labels[24], new JScrollPane(negativeAspectsArea)}
+        };
+
+        int row = 0;
+        for (Object[] field : fields) {
+            gbc.gridx = 0;
+            gbc.gridy = row;
+            gbc.weightx = 0.3;
+            formPanel.add(new JLabel((String) field[0]), gbc);
+
+            gbc.gridx = 1;
+            gbc.weightx = 0.7;
+            formPanel.add((Component) field[1], gbc); // Ensure casting to Component
+            row++;
         }
-        // Construct the UPDATE query with values from the table
-        StringBuilder queryBuilder = new StringBuilder(updateQuery);
-        for (int i = 0; i < model.getColumnCount(); i++) {
-            String columnName = model.getColumnName(i);
-            String value = model.getValueAt(0, i).toString().trim().replace("'", "''"); // Escape single quotes
-            queryBuilder.append(columnName).append(" = '").append(value).append("', ");
-        }
-        queryBuilder.setLength(queryBuilder.length() - 2); // Remove the trailing comma and space
-        queryBuilder.append(" WHERE studentID = '").append(studentID).append("'");
-        String finalQuery = queryBuilder.toString();
-        try {
-            // Send the query to the server
-            String result = SQLiteClient.sendQuery(finalQuery);
-            if (result.toLowerCase().contains("error")) {
-                SwingUtilities.invokeLater(() -> {
-                    showErrorDialog("Error occurred while updating the record. " + result, null);
-                });
-            } else {
-                SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(null, "Record updated successfully!");
-                });
+
+        // Store references to editable fields for later use
+        formPanel.putClientProperty("fields", fields);
+
+        return formPanel;
+    }
+
+    // Helper method to find value by header
+    private static String findValueByHeader(String[] headers, String[] data, String headerName) {
+        for (int i = 0; i < headers.length; i++) {
+            if (headers[i].equalsIgnoreCase(headerName)) {
+                return data[i];
             }
-        } catch (Exception e) {
-            showErrorDialog("Error occurred while communicating with the server.", e);
         }
+        return "";
+    }
+
+    // Helper method to add a detail row
+    private static void addDetailRow(JPanel panel, GridBagConstraints gbc, String label, String value) {
+        gbc.gridx = 0;
+        gbc.gridy++;
+        panel.add(new JLabel(label + ":"), gbc);
+        
+        gbc.gridx = 1;
+        panel.add(new JLabel(value), gbc);
+    }
+
+    // Helper method to add a text area detail
+    private static void addTextAreaDetail(JPanel panel, GridBagConstraints gbc, String label, String value) {
+        gbc.gridx = 0;
+        gbc.gridy++;
+        gbc.gridwidth = 2;
+        panel.add(new JLabel(label + ":"), gbc);
+        
+        gbc.gridy++;
+        JTextArea textArea = new JTextArea(value);
+        textArea.setRows(3);
+        textArea.setEditable(false);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(500, 70));
+        panel.add(scrollPane, gbc);
+        
+        gbc.gridwidth = 1;
     }
 
     private static void deleteFromDatabase(String tableName, String studentID) {
@@ -938,5 +1338,209 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             JOptionPane.showMessageDialog(null, message, "Information", JOptionPane.INFORMATION_MESSAGE);
         });
+    }
+
+    private static void updateAcceptanceRecord(Object[] fields, String studentID) {
+        // Fix array indexing - fields array contains pairs of [label, component]
+        JTextField nameField = (JTextField) ((Object[])fields[0])[1];
+        JTextField facultyField = (JTextField) ((Object[])fields[1])[1];
+        JTextField datesField = (JTextField) ((Object[])fields[2])[1];
+        JTextField institutionNameField = (JTextField) ((Object[])fields[3])[1];
+        JTextField institutionAddressField = (JTextField) ((Object[])fields[4])[1];
+        JTextField institutionPhoneField = (JTextField) ((Object[])fields[5])[1];
+        JTextField responsibleNameField = (JTextField) ((Object[])fields[6])[1];
+
+        // Input Validation
+        if (nameField.getText().trim().isEmpty() ||
+            facultyField.getText().trim().isEmpty() ||
+            datesField.getText().trim().isEmpty() ||
+            institutionNameField.getText().trim().isEmpty() ||
+            institutionAddressField.getText().trim().isEmpty() ||
+            institutionPhoneField.getText().trim().isEmpty() ||
+            responsibleNameField.getText().trim().isEmpty()) {
+            showInfoDialog("All fields except Student ID must be filled.");
+            return;
+        }
+
+        String updateQuery = String.format(
+            "UPDATE InternshipAcceptance SET " +
+            "name = '%s', " +
+            "faculty = '%s', " +
+            "dates = '%s', " +
+            "institutionName = '%s', " +
+            "institutionAddress = '%s', " +
+            "institutionPhone = '%s', " +
+            "responsibleName = '%s' " +
+            "WHERE studentID = '%s'",
+            nameField.getText().replace("'", "''"),
+            facultyField.getText().replace("'", "''"),
+            datesField.getText().replace("'", "''"),
+            institutionNameField.getText().replace("'", "''"),
+            institutionAddressField.getText().replace("'", "''"),
+            institutionPhoneField.getText().replace("'", "''"),
+            responsibleNameField.getText().replace("'", "''"),
+            studentID.replace("'", "''")
+        );
+
+        try {
+            String result = SQLiteClient.sendQuery(updateQuery);
+            if (result.startsWith("Update Count:")) {
+                SwingUtilities.invokeLater(() -> {
+                    showInfoDialog("Record updated successfully.");
+                });
+            } else {
+                SwingUtilities.invokeLater(() -> {
+                    showInfoDialog("Record updated.");
+                });
+            }
+        } catch (Exception e) {
+            showErrorDialog("Error occurred while updating the record.", e);
+        }
+    }
+
+    private static void updateEvaluationRecord(Object[] fields, String studentID) {
+        try {
+            // Get the components directly from the fields array
+            Component[] components = new Component[fields.length];
+            for (int i = 0; i < fields.length; i++) {
+                components[i] = (Component) fields[i];
+            }
+
+            // Now extract the text from each field
+            String name = ((JTextField)components[0]).getText().trim();
+            String evaluationDate = ((JTextField)components[1]).getText().trim();
+            String responsibleName = ((JTextField)components[2]).getText().trim();
+            String evaluation = ((JTextField)components[3]).getText().trim();
+
+            String updateQuery = String.format(
+                "UPDATE InternEvaluation SET " +
+                "name = '%s', " +
+                "evaluationDate = '%s', " +
+                "responsibleName = '%s', " +
+                "evaluation = '%s' " +
+                "WHERE studentID = '%s'",
+                name.replace("'", "''"),
+                evaluationDate.replace("'", "''"),
+                responsibleName.replace("'", "''"),
+                evaluation.replace("'", "''"),
+                studentID.replace("'", "''")
+            );
+
+            String result = SQLiteClient.sendQuery(updateQuery);
+            if (result.startsWith("Update Count:")) {
+                SwingUtilities.invokeLater(() -> {
+                    showInfoDialog("Record updated successfully.");
+                });
+            } else {
+                SwingUtilities.invokeLater(() -> {
+                    showInfoDialog("Record updated.");
+                });
+            }
+        } catch (Exception e) {
+            showErrorDialog("Error occurred while updating the record.", e);
+        }
+    }
+
+    private static void updatePlaceEvaluationRecord(Object[] fields, String studentID) {
+        try {
+            // Each field is stored as [label, component] pair in the fields array
+            String name = ((JTextField)((Object[])fields[0])[1]).getText().trim();
+            String institutionName = ((JTextField)((Object[])fields[1])[1]).getText().trim();
+            String duration = ((JTextField)((Object[])fields[2])[1]).getText().trim();
+            String salary = ((JComboBox<?>)((Object[])fields[3])[1]).getSelectedItem().toString();
+            String transportation = ((JComboBox<?>)((Object[])fields[4])[1]).getSelectedItem().toString();
+            String meals = ((JComboBox<?>)((Object[])fields[5])[1]).getSelectedItem().toString();
+            String practiceTheory = ((JComboBox<?>)((Object[])fields[6])[1]).getSelectedItem().toString();
+            String foreignLanguage = ((JComboBox<?>)((Object[])fields[7])[1]).getSelectedItem().toString();
+            String responsibilities = ((JTextField)((Object[])fields[8])[1]).getText().trim();
+            String workingSpace = ((JTextField)((Object[])fields[9])[1]).getText().trim();
+            String factoryConditions = ((JTextField)((Object[])fields[10])[1]).getText().trim();
+            String recommendation = ((JTextField)((Object[])fields[11])[1]).getText().trim();
+            String futureWork = ((JTextField)((Object[])fields[12])[1]).getText().trim();
+            String processScore = ((JSpinner)((Object[])fields[13])[1]).getValue().toString();
+            String decisionMaking = ((JSpinner)((Object[])fields[14])[1]).getValue().toString();
+            String expectations = ((JSpinner)((Object[])fields[15])[1]).getValue().toString();
+            String researchDevelopment = ((JSpinner)((Object[])fields[16])[1]).getValue().toString();
+            
+            // Text areas are inside JScrollPane
+            String comments = ((JTextArea)((JScrollPane)((Object[])fields[17])[1]).getViewport().getView()).getText().trim();
+            String reasonForChoice = ((JTextArea)((JScrollPane)((Object[])fields[18])[1]).getViewport().getView()).getText().trim();
+            String analysisMethodsLearned = ((JTextArea)((JScrollPane)((Object[])fields[19])[1]).getViewport().getView()).getText().trim();
+            String courseAssociation = ((JTextArea)((JScrollPane)((Object[])fields[20])[1]).getViewport().getView()).getText().trim();
+            String workAssociation = ((JTextArea)((JScrollPane)((Object[])fields[21])[1]).getViewport().getView()).getText().trim();
+            String knowledgeLacks = ((JTextArea)((JScrollPane)((Object[])fields[22])[1]).getViewport().getView()).getText().trim();
+            String positiveAspects = ((JTextArea)((JScrollPane)((Object[])fields[23])[1]).getViewport().getView()).getText().trim();
+            String negativeAspects = ((JTextArea)((JScrollPane)((Object[])fields[24])[1]).getViewport().getView()).getText().trim();
+
+            String updateQuery = String.format(
+                "UPDATE InternshipPlaceEvaluation SET " +
+                "name = '%s', " +
+                "institutionName = '%s', " +
+                "duration = '%s', " +
+                "salary = '%s', " +
+                "transportation = '%s', " +
+                "meals = '%s', " +
+                "practiceTheory = '%s', " +
+                "foreignLanguage = '%s', " +
+                "responsibilities = '%s', " +
+                "workingSpace = '%s', " +
+                "factoryConditions = '%s', " +
+                "recommendation = '%s', " +
+                "futureWork = '%s', " +
+                "processScore = '%s', " +
+                "decisionMaking = '%s', " +
+                "expectations = '%s', " +
+                "researchDevelopment = '%s', " +
+                "comments = '%s', " +
+                "reasonForChoice = '%s', " +
+                "analysisMethodsLearned = '%s', " +
+                "courseAssociation = '%s', " +
+                "workAssociation = '%s', " +
+                "knowledgeLacks = '%s', " +
+                "positiveAspects = '%s', " +
+                "negativeAspects = '%s' " +
+                "WHERE studentID = '%s'",
+                name.replace("'", "''"),
+                institutionName.replace("'", "''"),
+                duration.replace("'", "''"),
+                salary.replace("'", "''"),
+                transportation.replace("'", "''"),
+                meals.replace("'", "''"),
+                practiceTheory.replace("'", "''"),
+                foreignLanguage.replace("'", "''"),
+                responsibilities.replace("'", "''"),
+                workingSpace.replace("'", "''"),
+                factoryConditions.replace("'", "''"),
+                recommendation.replace("'", "''"),
+                futureWork.replace("'", "''"),
+                processScore.replace("'", "''"),
+                decisionMaking.replace("'", "''"),
+                expectations.replace("'", "''"),
+                researchDevelopment.replace("'", "''"),
+                comments.replace("'", "''"),
+                reasonForChoice.replace("'", "''"),
+                analysisMethodsLearned.replace("'", "''"),
+                courseAssociation.replace("'", "''"),
+                workAssociation.replace("'", "''"),
+                knowledgeLacks.replace("'", "''"),
+                positiveAspects.replace("'", "''"),
+                negativeAspects.replace("'", "''"),
+                studentID.replace("'", "''")
+            );
+
+            String result = SQLiteClient.sendQuery(updateQuery);
+            if (result.startsWith("Update Count:")) {
+                SwingUtilities.invokeLater(() -> {
+                    showInfoDialog("Record updated successfully.");
+                });
+            } else {
+                SwingUtilities.invokeLater(() -> {
+                    showInfoDialog("Record updated.");
+                });
+            }
+        } catch (Exception e) {
+            showErrorDialog("Error occurred while updating the record.", e);
+            e.printStackTrace();
+        }
     }
 }
