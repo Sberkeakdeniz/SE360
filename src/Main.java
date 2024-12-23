@@ -1,6 +1,8 @@
 import javax.swing.table.DefaultTableModel;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.sql.*;
@@ -15,6 +17,8 @@ import java.io.*;
 import java.net.*;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 class SQLiteServer {
     private static final String DATABASE_URL = "jdbc:sqlite:identifier.db"; // Path to your SQLite database
@@ -139,6 +143,7 @@ class SQLiteServer {
         }
     }
 }
+
 
 class SQLiteClient {
     private static final String SERVER_ADDRESS = "localhost"; // Replace with server's IP address
@@ -306,10 +311,7 @@ public class Main {
         tabbedPane.addTab("Intern Evaluation Form", createEvaluationFormPanel());
         tabbedPane.addTab("Internship Place Evaluation Form", createPlaceEvaluationFormPanel());
 
-        JPanel mainTabPanel = new JPanel(new BorderLayout());
-        mainTabPanel.add(tabbedPane, BorderLayout.CENTER);
-
-        frame.add(mainTabPanel);
+        frame.add(tabbedPane, BorderLayout.CENTER);
         frame.setVisible(true);
     }
 
@@ -544,10 +546,15 @@ public class Main {
         JButton deleteButton = new JButton("Delete Record");
         JButton searchButton = new JButton("Search/Edit");
         JButton logoutButton = new JButton("Logout");
+        JButton exportAllFormsButton = new JButton("Export All Forms");
         
-        // Style the logout button
+        // Style buttons
         logoutButton.setBackground(Color.RED);
         logoutButton.setForeground(Color.WHITE);
+        exportAllFormsButton.setBackground(new Color(30, 144, 255));
+        exportAllFormsButton.setForeground(Color.WHITE);
+        exportAllFormsButton.setFocusPainted(false);
+        exportAllFormsButton.setFont(new Font("Tahoma", Font.BOLD, 12));
 
         // Add action listeners
         submitButton.addActionListener(e -> {
@@ -589,7 +596,7 @@ public class Main {
         });
 
         deleteButton.addActionListener(e -> {
-            String inputId = JOptionPane.showInputDialog(null, "Enter the Student ID of the record to delete:");
+            String inputId = JOptionPane.showInputDialog(frame, "Enter the Student ID of the record to delete:");
             if (inputId != null && !inputId.trim().isEmpty()) {
                 if (!isNumeric(inputId.trim())) {
                     showInfoDialog("Student ID must be a number.");
@@ -611,13 +618,19 @@ public class Main {
         });
 
         logoutButton.addActionListener(e -> {
-            int option = JOptionPane.showConfirmDialog(null, "Are you sure you want to logout?", "Logout", JOptionPane.YES_NO_OPTION);
+            int option = JOptionPane.showConfirmDialog(frame, "Are you sure you want to logout?", "Logout", JOptionPane.YES_NO_OPTION);
             if (option == JOptionPane.YES_OPTION) {
                 frame.dispose();
                 showLoginScreen();
             }
         });
 
+        exportAllFormsButton.addActionListener(e -> {
+            exportAllFormsToExcel();
+        });
+
+        // Add buttons to panel in correct order
+        buttonsPanel.add(exportAllFormsButton);
         buttonsPanel.add(submitButton);
         buttonsPanel.add(deleteButton);
         buttonsPanel.add(searchButton);
@@ -749,6 +762,16 @@ public class Main {
             }
         });
 
+        // Add Export All Forms button
+        JButton exportAllFormsButton = new JButton("Export All Forms");
+        exportAllFormsButton.setBackground(new Color(30, 144, 255)); // Dodger Blue
+        exportAllFormsButton.setForeground(Color.WHITE);
+        exportAllFormsButton.setFocusPainted(false);
+        exportAllFormsButton.setFont(new Font("Tahoma", Font.BOLD, 12));
+        exportAllFormsButton.addActionListener(e -> {
+            exportAllFormsToExcel();
+        });
+
         JButton deleteButton = new JButton("Delete Record");
         deleteButton.addActionListener(e -> {
             String inputId = JOptionPane.showInputDialog(null, "Enter the Student ID of the record to delete:");
@@ -774,6 +797,7 @@ public class Main {
 
         JButton searchButton = new JButton("Search/Edit");
         searchButton.addActionListener(e -> {
+            System.out.println("Search button clicked"); // Debug message
             String studentID = JOptionPane.showInputDialog(frame, "Enter the Student ID to search/edit:");
             if (studentID != null && !studentID.trim().isEmpty()) {
                 if (!isNumeric(studentID.trim())) {
@@ -784,6 +808,7 @@ public class Main {
             }
         });
 
+        buttonsPanel.add(exportAllFormsButton); // Add Export All Forms button first
         buttonsPanel.add(submitButton);
         buttonsPanel.add(deleteButton);
         buttonsPanel.add(searchButton);
@@ -798,25 +823,6 @@ public class Main {
     private static void saveAcceptanceForm(String name, String studentID, String faculty, String dates,
                                            String institutionName, String institutionAddress,
                                            String institutionPhone, String responsibleName) {
-        // Input validation
-        if (!isValidStudentID(studentID)) {
-            SwingUtilities.invokeLater(() -> 
-                showInfoDialog("Student ID must be exactly 8 digits."));
-            return;
-        }
-        
-        if (!isValidName(name)) {
-            SwingUtilities.invokeLater(() -> 
-                showInfoDialog("Name must contain only letters, spaces, and hyphens."));
-            return;
-        }
-        
-        if (!isValidPhoneNumber(institutionPhone)) {
-            SwingUtilities.invokeLater(() -> 
-                showInfoDialog("Invalid phone number format."));
-            return;
-        }
-        
         String insertQuery = String.format(
                 "INSERT INTO InternshipAcceptance (name, studentID, faculty, dates, institutionName, institutionAddress, institutionPhone, responsibleName) " +
                         "VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')",
@@ -832,7 +838,7 @@ public class Main {
 
         try {
             String result = SQLiteClient.sendQuery(insertQuery); // Send the query to the server
-            System.out.println(result);
+           
 
             if (result.contains("UNIQUE constraint failed")) {
                 SwingUtilities.invokeLater(() -> {
@@ -1029,10 +1035,8 @@ public class Main {
                     }
                 }
 
-                // Add tabbedPane to dialog
-                dialog.add(tabbedPane, BorderLayout.CENTER);
-
-                // Add Update Button
+                // Buttons Panel
+                JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
                 JButton updateButton = new JButton("Update");
                 updateButton.addActionListener(e -> {
                     // Retrieve the selected tab
@@ -1077,9 +1081,26 @@ public class Main {
                     }
                 });
 
-                JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-                buttonPanel.add(updateButton);
+                // **Add Export All Forms button**
+                JButton exportAllFormsButton = new JButton("Export All Forms");
+                exportAllFormsButton.setBackground(new Color(30, 144, 255)); // Dodger Blue
+                exportAllFormsButton.setForeground(Color.WHITE); // White text for contrast
+                exportAllFormsButton.setFocusPainted(false);
+                exportAllFormsButton.setFont(new Font("Tahoma", Font.BOLD, 12));
+                exportAllFormsButton.addActionListener(e -> {
+                    exportAllFormsToExcel();
+                });
+                buttonPanel.add(exportAllFormsButton); // **Removed Export All Forms button**
 
+                // **Add the Export to Excel button**
+                JButton exportButton = new JButton("Export to Excel");
+                exportButton.addActionListener(e -> {
+                    exportRecordToExcel(tableResults, studentID);
+                });
+                buttonPanel.add(updateButton);
+                buttonPanel.add(exportButton); // **Added Export button**
+
+                dialog.add(tabbedPane, BorderLayout.CENTER);
                 dialog.add(buttonPanel, BorderLayout.SOUTH);
 
                 dialog.setLocationRelativeTo(frame);
@@ -1300,7 +1321,7 @@ public class Main {
         }
         return "";
     }
-    
+
     // Helper method to add a detail row
     private static void addDetailRow(JPanel panel, GridBagConstraints gbc, String label, String value) {
         gbc.gridx = 0;
@@ -1636,40 +1657,105 @@ public class Main {
         }
     }
 
-    // Add these validation helper methods
-    private static boolean isValidName(String name) {
-        // Allow letters, spaces, and hyphens only
-        return name.matches("[a-zA-ZçğıöşüÇĞİÖŞÜ\\s-]+");
-    }
-
-    private static boolean isValidPhoneNumber(String phone) {
-        // Allow format: +90-XXX-XXX-XXXX or 0XXX-XXX-XXXX
-        return phone.matches("(\\+90|0)?[0-9]{3}-[0-9]{3}-[0-9]{4}");
-    }
-
-    private static boolean isValidDate(String date) {
-        // Check for dd.MM.yy format
-        if (!date.matches("\\d{2}\\.\\d{2}\\.\\d{2}")) {
-            return false;
-        }
-        
+    // **Implement the exportRecordToExcel method**
+    private static void exportRecordToExcel(Map<String, String> tableResults, String studentID) {
+        Workbook workbook = new XSSFWorkbook();
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yy");
-            sdf.setLenient(false);
-            sdf.parse(date);
-            return true;
-        } catch (ParseException e) {
-            return false;
+            for (Map.Entry<String, String> entry : tableResults.entrySet()) {
+                String tableName = entry.getKey();
+                String data = entry.getValue();
+
+                Sheet sheet = workbook.createSheet(tableName);
+
+                String[] rows = data.split("\n");
+                for (int i = 0; i < rows.length; i++) {
+                    Row row = sheet.createRow(i);
+                    String[] cells = rows[i].split("\t");
+                    for (int j = 0; j < cells.length; j++) {
+                        Cell cell = row.createCell(j);
+                        cell.setCellValue(cells[j]);
+                    }
+                }
+            }
+
+            // **Save the Excel file**
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Save Excel File");
+            fileChooser.setSelectedFile(new File("export_" + studentID + ".xlsx"));
+            int userSelection = fileChooser.showSaveDialog(frame);
+
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                File fileToSave = fileChooser.getSelectedFile();
+                try (FileOutputStream fileOut = new FileOutputStream(fileToSave)) {
+                    workbook.write(fileOut);
+                    showInfoDialog("Data exported successfully to " + fileToSave.getAbsolutePath());
+                }
+            }
+        } catch (IOException ex) {
+            showErrorDialog("Error occurred while exporting to Excel.", ex);
+        } finally {
+            try {
+                workbook.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    private static boolean isValidScore(int score) {
-        // Scores should be between 1 and 5
-        return score >= 1 && score <= 5;
-    }
+    // **Implement the exportAllFormsToExcel method**
+    private static void exportAllFormsToExcel() {
+        Workbook workbook = new XSSFWorkbook();
+        try {
+            // Define tables and their corresponding sheet names
+            Map<String, String> tables = new HashMap<>();
+            tables.put("InternshipAcceptance", "Internship Acceptance");
+            tables.put("InternEvaluation", "Intern Evaluation");
+            tables.put("InternshipPlaceEvaluation", "Internship Place Evaluation");
 
-    private static boolean isValidStudentID(String studentID) {
-        // Must be numeric and exactly 8 digits
-        return studentID.matches("\\d{8}");
+            // Iterate through each table and populate sheets
+            for (Map.Entry<String, String> entry : tables.entrySet()) {
+                String tableName = entry.getKey();
+                String sheetName = entry.getValue();
+
+                String query = "SELECT * FROM " + tableName;
+                String queryResult = SQLiteClient.sendQuery(query);
+
+                if (queryResult != null && !queryResult.isEmpty()) {
+                    Sheet sheet = workbook.createSheet(sheetName);
+                    String[] rows = queryResult.split("\n");
+
+                    for (int i = 0; i < rows.length; i++) {
+                        Row row = sheet.createRow(i);
+                        String[] cells = rows[i].split("\t");
+                        for (int j = 0; j < cells.length; j++) {
+                            Cell cell = row.createCell(j);
+                            cell.setCellValue(cells[j]);
+                        }
+                    }
+                }
+            }
+
+            // **Save the Excel file**
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Save All Forms Excel File");
+            fileChooser.setSelectedFile(new File("AllFormsExport.xlsx"));
+            int userSelection = fileChooser.showSaveDialog(frame);
+
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                File fileToSave = fileChooser.getSelectedFile();
+                try (FileOutputStream fileOut = new FileOutputStream(fileToSave)) {
+                    workbook.write(fileOut);
+                    showInfoDialog("All forms exported successfully to " + fileToSave.getAbsolutePath());
+                }
+            }
+        } catch (IOException ex) {
+            showErrorDialog("Error occurred while exporting all forms to Excel.", ex);
+        } finally {
+            try {
+                workbook.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
