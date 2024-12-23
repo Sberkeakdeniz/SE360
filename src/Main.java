@@ -644,12 +644,6 @@ public class Main {
         return mainPanel;
     }
 
-    // Helper method to create wrapped labels
-    private static JLabel createWrappedLabel(String text) {
-        JLabel label = new JLabel("<html><body style='width: 200px'>" + text + "</body></html>", SwingConstants.RIGHT);
-        return label;
-    }
-
     // Helper method to validate form data
     private static boolean validateFormData(String[] formData) {
         // Check basic fields
@@ -1320,36 +1314,6 @@ public class Main {
             }
         }
         return "";
-    }
-
-    // Helper method to add a detail row
-    private static void addDetailRow(JPanel panel, GridBagConstraints gbc, String label, String value) {
-        gbc.gridx = 0;
-        gbc.gridy++;
-        panel.add(new JLabel(label + ":"), gbc);
-        
-        gbc.gridx = 1;
-        panel.add(new JLabel(value), gbc);
-    }
-
-    // Helper method to add a text area detail
-    private static void addTextAreaDetail(JPanel panel, GridBagConstraints gbc, String label, String value) {
-        gbc.gridx = 0;
-        gbc.gridy++;
-        gbc.gridwidth = 2;
-        panel.add(new JLabel(label + ":"), gbc);
-        
-        gbc.gridy++;
-        JTextArea textArea = new JTextArea(value);
-        textArea.setRows(3);
-        textArea.setEditable(false);
-        textArea.setLineWrap(true);
-        textArea.setWrapStyleWord(true);
-        JScrollPane scrollPane = new JScrollPane(textArea);
-        scrollPane.setPreferredSize(new Dimension(500, 70));
-        panel.add(scrollPane, gbc);
-        
-        gbc.gridwidth = 1;
     }
 
     private static void deleteFromDatabase(String tableName, String studentID) {
