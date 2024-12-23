@@ -21,7 +21,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 class SQLiteServer {
-    private static final String DATABASE_URL = "jdbc:sqlite:identifier.db"; // Path to your SQLite database
+    private static final String DATABASE_URL = "jdbc:sqlite:identifier.db";
     private static final int PORT = 12345; // Port number for the server
 
     public static void main(String[] args) {
@@ -188,7 +188,7 @@ public class Main {
     private static final ExecutorService executorService = Executors.newFixedThreadPool(4);
     private static boolean allFieldsFilled;
     static JFrame frame = new JFrame("Internship Management System");
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yy"); // Date format for Internship Dates
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yy");
 
     public static void main(String[] args) {
         try {
@@ -284,7 +284,7 @@ public class Main {
                 " AND password = '" + sanitizedPassword + "'";
 
         try {
-            String result = SQLiteClient.sendQuery(query); // Send query to the server
+            String result = SQLiteClient.sendQuery(query);
            
 
             if (result != null && !result.isEmpty()) {
@@ -348,7 +348,6 @@ public class Main {
                 return;
             }
 
-            // Proceed to save the form data
             executorService.execute(() -> saveAcceptanceForm(
                     nameSurname, studentId, faculty, internshipDates, institutionName, institutionAddress, institutionPhone, responsibleName
             ));
@@ -377,7 +376,6 @@ public class Main {
                 return;
             }
 
-            // Proceed to save the form data
             executorService.execute(() -> saveEvaluationForm(
                     nameSurname, studentId, evaluationDate, responsibleName, overallEvaluation
             ));
@@ -432,7 +430,6 @@ public class Main {
         salaryCombo.setPreferredSize(new Dimension(150, salaryCombo.getPreferredSize().height));
         formPanel.add(salaryCombo, gbc);
 
-        // Evaluation questions with combo boxes
         String[] evaluationQuestions = {
             "Was any transportation opportunity provided?",
             "Was any meal opportunity provided?",
@@ -507,7 +504,6 @@ public class Main {
             "Identify the 3 most negative aspects of the institution you performed your internship at:"
         };
 
-        // Add text areas
         JTextArea[] textAreas = new JTextArea[textAreaLabels.length];
         
         for (int i = 0; i < textAreaLabels.length; i++) {
@@ -525,7 +521,7 @@ public class Main {
 
             gbc.gridy++;
             // Create and configure text area
-            textAreas[i] = new JTextArea(4, 40); // 4 rows, 40 columns
+            textAreas[i] = new JTextArea(4, 40);
             textAreas[i].setLineWrap(true);
             textAreas[i].setWrapStyleWord(true);
             
@@ -548,7 +544,6 @@ public class Main {
         JButton logoutButton = new JButton("Logout");
         JButton exportAllFormsButton = new JButton("Export All Forms");
         
-        // Style buttons
         logoutButton.setBackground(Color.RED);
         logoutButton.setForeground(Color.WHITE);
         exportAllFormsButton.setBackground(new Color(30, 144, 255));
@@ -556,7 +551,6 @@ public class Main {
         exportAllFormsButton.setFocusPainted(false);
         exportAllFormsButton.setFont(new Font("Tahoma", Font.BOLD, 12));
 
-        // Add action listeners
         submitButton.addActionListener(e -> {
             // Gather all form data
             List<String> formDataList = new ArrayList<>();
@@ -644,7 +638,6 @@ public class Main {
         return mainPanel;
     }
 
-    // Helper method to validate form data
     private static boolean validateFormData(String[] formData) {
         // Check basic fields
         for (int i = 0; i < 4; i++) {
@@ -716,7 +709,7 @@ public class Main {
 
         JButton submitButton = new JButton("Submit");
         Color defaultColor = submitButton.getBackground();
-        Color hoverColor = Color.decode("#228B22"); // Forest Green
+        Color hoverColor = Color.decode("#228B22");
         submitButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -756,9 +749,9 @@ public class Main {
             }
         });
 
-        // Add Export All Forms button
+        
         JButton exportAllFormsButton = new JButton("Export All Forms");
-        exportAllFormsButton.setBackground(new Color(30, 144, 255)); // Dodger Blue
+        exportAllFormsButton.setBackground(new Color(30, 144, 255));
         exportAllFormsButton.setForeground(Color.WHITE);
         exportAllFormsButton.setFocusPainted(false);
         exportAllFormsButton.setFont(new Font("Tahoma", Font.BOLD, 12));
@@ -791,7 +784,7 @@ public class Main {
 
         JButton searchButton = new JButton("Search/Edit");
         searchButton.addActionListener(e -> {
-            System.out.println("Search button clicked"); // Debug message
+            System.out.println("Search button clicked");
             String studentID = JOptionPane.showInputDialog(frame, "Enter the Student ID to search/edit:");
             if (studentID != null && !studentID.trim().isEmpty()) {
                 if (!isNumeric(studentID.trim())) {
@@ -802,7 +795,7 @@ public class Main {
             }
         });
 
-        buttonsPanel.add(exportAllFormsButton); // Add Export All Forms button first
+        buttonsPanel.add(exportAllFormsButton);
         buttonsPanel.add(submitButton);
         buttonsPanel.add(deleteButton);
         buttonsPanel.add(searchButton);
@@ -831,7 +824,7 @@ public class Main {
         );
 
         try {
-            String result = SQLiteClient.sendQuery(insertQuery); // Send the query to the server
+            String result = SQLiteClient.sendQuery(insertQuery);
            
 
             if (result.contains("UNIQUE constraint failed")) {
@@ -885,7 +878,7 @@ public class Main {
         );
 
         try {
-            String result = SQLiteClient.sendQuery(insertQuery); // Send the query to the server
+            String result = SQLiteClient.sendQuery(insertQuery);
         
 
             if (result.contains("UNIQUE constraint failed")) {
@@ -972,12 +965,11 @@ public class Main {
             for (String table : tables) {
                 String query = "SELECT * FROM " + table + " WHERE studentID = '" + studentID.replace("'", "''") + "'";
                 String result = SQLiteClient.sendQuery(query);
-                if (result != null && result.contains("\n")) { // Assuming that a successful query returns data separated by newlines
+                if (result != null && result.contains("\n")) { // A successful query returns data separated by newlines
                     tableResults.put(table, result);
                 }
             }
 
-            // If no records found in any table
             if (tableResults.isEmpty()) {
                 SwingUtilities.invokeLater(() -> {
                     JDialog dialog = new JDialog(frame, "Search Results for Student ID: " + studentID, true);
@@ -992,7 +984,6 @@ public class Main {
                 return;
             }
 
-            // Create dialog with a tabbed pane
             SwingUtilities.invokeLater(() -> {
                 JDialog dialog = new JDialog(frame, "Search Results for Student ID: " + studentID, true);
                 dialog.setLayout(new BorderLayout(10, 10));
@@ -1075,24 +1066,13 @@ public class Main {
                     }
                 });
 
-                // **Add Export All Forms button**
-                JButton exportAllFormsButton = new JButton("Export All Forms");
-                exportAllFormsButton.setBackground(new Color(30, 144, 255)); // Dodger Blue
-                exportAllFormsButton.setForeground(Color.WHITE); // White text for contrast
-                exportAllFormsButton.setFocusPainted(false);
-                exportAllFormsButton.setFont(new Font("Tahoma", Font.BOLD, 12));
-                exportAllFormsButton.addActionListener(e -> {
-                    exportAllFormsToExcel();
-                });
-                buttonPanel.add(exportAllFormsButton); // **Removed Export All Forms button**
-
                 // **Add the Export to Excel button**
                 JButton exportButton = new JButton("Export to Excel");
                 exportButton.addActionListener(e -> {
                     exportRecordToExcel(tableResults, studentID);
                 });
                 buttonPanel.add(updateButton);
-                buttonPanel.add(exportButton); // **Added Export button**
+                buttonPanel.add(exportButton);
 
                 dialog.add(tabbedPane, BorderLayout.CENTER);
                 dialog.add(buttonPanel, BorderLayout.SOUTH);
@@ -1106,7 +1086,6 @@ public class Main {
         }
     }
 
-    // Helper method for Internship Acceptance form results
     private static JPanel createAcceptanceSearchPanel(String[] headers, String[] data) {
         JPanel formPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -1156,7 +1135,6 @@ public class Main {
         return formPanel;
     }
 
-    // Helper method for Intern Evaluation form results
     private static JPanel createEvaluationSearchPanel(String[] headers, String[] data) {
         JPanel formPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -1200,7 +1178,6 @@ public class Main {
         return formPanel;
     }
 
-    // Helper method for Place Evaluation form results
     private static JPanel createPlaceEvaluationSearchPanel(String[] headers, String[] data) {
         JPanel formPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -1306,7 +1283,6 @@ public class Main {
         return formPanel;
     }
 
-    // Helper method to find value by header
     private static String findValueByHeader(String[] headers, String[] data, String headerName) {
         for (int i = 0; i < headers.length; i++) {
             if (headers[i].equalsIgnoreCase(headerName)) {
@@ -1372,7 +1348,6 @@ public class Main {
             Date startDate = dateFormat.parse(startDateStr);
             Date endDate = dateFormat.parse(endDateStr);
             
-            // Optional: Check if startDate is before endDate
             if (startDate.after(endDate)) {
                 return false;
             }
@@ -1548,7 +1523,6 @@ public class Main {
             return;
         }
 
-        // Construct the UPDATE query
         String updateQuery = String.format(
             "UPDATE InternshipPlaceEvaluation SET " +
             "name = '%s', " +
@@ -1621,7 +1595,6 @@ public class Main {
         }
     }
 
-    // **Implement the exportRecordToExcel method**
     private static void exportRecordToExcel(Map<String, String> tableResults, String studentID) {
         Workbook workbook = new XSSFWorkbook();
         try {
@@ -1666,7 +1639,6 @@ public class Main {
         }
     }
 
-    // **Implement the exportAllFormsToExcel method**
     private static void exportAllFormsToExcel() {
         Workbook workbook = new XSSFWorkbook();
         try {
