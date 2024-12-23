@@ -546,10 +546,15 @@ public class Main {
         JButton deleteButton = new JButton("Delete Record");
         JButton searchButton = new JButton("Search/Edit");
         JButton logoutButton = new JButton("Logout");
+        JButton exportAllFormsButton = new JButton("Export All Forms");
         
-        // Style the logout button
+        // Style buttons
         logoutButton.setBackground(Color.RED);
         logoutButton.setForeground(Color.WHITE);
+        exportAllFormsButton.setBackground(new Color(30, 144, 255));
+        exportAllFormsButton.setForeground(Color.WHITE);
+        exportAllFormsButton.setFocusPainted(false);
+        exportAllFormsButton.setFont(new Font("Tahoma", Font.BOLD, 12));
 
         // Add action listeners
         submitButton.addActionListener(e -> {
@@ -590,17 +595,42 @@ public class Main {
             executorService.execute(() -> savePlaceEvaluationForm(formData));
         });
 
-        // Add Export All Forms button
-        JButton exportAllFormsButton = new JButton("Export All Forms");
-        exportAllFormsButton.setBackground(new Color(30, 144, 255)); // Dodger Blue
-        exportAllFormsButton.setForeground(Color.WHITE);
-        exportAllFormsButton.setFocusPainted(false);
-        exportAllFormsButton.setFont(new Font("Tahoma", Font.BOLD, 12));
+        deleteButton.addActionListener(e -> {
+            String inputId = JOptionPane.showInputDialog(frame, "Enter the Student ID of the record to delete:");
+            if (inputId != null && !inputId.trim().isEmpty()) {
+                if (!isNumeric(inputId.trim())) {
+                    showInfoDialog("Student ID must be a number.");
+                    return;
+                }
+                executorService.execute(() -> deleteFromDatabase("InternshipPlaceEvaluation", inputId.trim()));
+            }
+        });
+
+        searchButton.addActionListener(e -> {
+            String studentID = JOptionPane.showInputDialog(frame, "Enter the Student ID to search/edit:");
+            if (studentID != null && !studentID.trim().isEmpty()) {
+                if (!isNumeric(studentID.trim())) {
+                    showInfoDialog("Student ID must be a number.");
+                    return;
+                }
+                executorService.execute(() -> searchInDatabase(studentID.trim()));
+            }
+        });
+
+        logoutButton.addActionListener(e -> {
+            int option = JOptionPane.showConfirmDialog(frame, "Are you sure you want to logout?", "Logout", JOptionPane.YES_NO_OPTION);
+            if (option == JOptionPane.YES_OPTION) {
+                frame.dispose();
+                showLoginScreen();
+            }
+        });
+
         exportAllFormsButton.addActionListener(e -> {
             exportAllFormsToExcel();
         });
 
-        buttonsPanel.add(exportAllFormsButton); // Add Export All Forms button first
+        // Add buttons to panel in correct order
+        buttonsPanel.add(exportAllFormsButton);
         buttonsPanel.add(submitButton);
         buttonsPanel.add(deleteButton);
         buttonsPanel.add(searchButton);
@@ -767,6 +797,7 @@ public class Main {
 
         JButton searchButton = new JButton("Search/Edit");
         searchButton.addActionListener(e -> {
+            System.out.println("Search button clicked"); // Debug message
             String studentID = JOptionPane.showInputDialog(frame, "Enter the Student ID to search/edit:");
             if (studentID != null && !studentID.trim().isEmpty()) {
                 if (!isNumeric(studentID.trim())) {
